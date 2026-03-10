@@ -1,9 +1,9 @@
-# Copyright Notice
+# Copyright & Usage Notice
 
 Copyright (c) 2026 Jeppe Lucking. All rights reserved.
 
-This project, including all code, assets, and documentation, is the sole property of Jeppe Lucking. No part of this project may be reproduced, distributed, modified, or used in any form or by any means, including for commercial purposes, without explicit written permission from the copyright holder.
+This project, including all code, assets, designs, and documentation, is the intellectual property of Jeppe Lucking. You may view and play the game for personal, non-commercial use only. No part of this project may be reproduced, distributed, modified, sold, or used in any derivative works (including commercial products) without explicit written permission from the copyright holder.
 
-This is a personal prototype and fan project. For inquiries about usage or collaboration, contact @luckingverse on X.
+For inquiries, collaborations, or permissions, contact @luckingverse on X.
 
-Disclaimer: This is inspired by *Ginga: Nagareboshi Gin* (Silver Fang), a copyrighted work. All rights to the original series belong to its creators. This project is non-commercial and for demonstration purposes only.
+Disclaimer: This is a non-commercial fan prototype inspired by *Ginga: Nagareboshi Gin* (Silver Fang). All rights to the original series belong to its creators (Yoshihiro Takahashi and affiliates). This project is for demonstration and portfolio purposes only and does not claim ownership of the source material.
