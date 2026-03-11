@@ -933,6 +933,7 @@ let shopTab=0,shopCursor=0,skinShopCursor=0;
 
 // ── STATE ─────────────────────────────────────────────
 let playerName=localStorage.getItem('ginga_name')||'';
+let lbNameInput='';
 const firstLaunch=!localStorage.getItem('ginga_played');
 if(firstLaunch)try{localStorage.setItem('ginga_played','1');}catch(e){}
 let state='nameentry',score=0,lives=3,coins=0,timeLeft=500,world=1;
@@ -944,7 +945,7 @@ const bumped=new Set();
 let wbFang=0,wbTime=0,introTimer=0,introPct=0;
 let checkpointX=0,checkpointReached=false;
 let vendPos=0,vendActive=false,vendCursor=0,vendNearby=false;
-let lbEntries=[],lbNameInput=playerName,lbEntering=false,pendingLbScore=0,lbAfterShop=false,pendingLbTimeout=null;
+let lbEntries=[],lbEntering=false,pendingLbScore=0,lbAfterShop=false,pendingLbTimeout=null;
 let lastMilestone=0;
 const VEND_ITEMS=[
   {label:'Big Sol 🐕',cost:3,type:'GROW'},{label:'Battouga 🌀',cost:4,type:'SPIN'},
@@ -2050,10 +2051,12 @@ function openLobbyFromTitle(){state='lobby';shopTab=2;shopCursor=0;skinShopCurso
 function continueFromShop(){
   startTransition(()=>{
     if(worldCleared){
-      worldCleared=false; // B271: must beat boss again to advance from next world
+      worldCleared=false;
       world=Math.min(world+1,10);
+      lives=3+UPG.extraLife.owned; // new world = full lives
     }
-    // if !worldCleared: replay current world (died before beating boss)
+    if(score===0)lives=3+UPG.extraLife.owned; // fresh game from lobby
+    // if !worldCleared: replay current world, keep remaining lives
     timeLeft=Math.min(500+world*15,700);camX=0;bossActive=false;
     inArena=false;arenaExitOpen=false;clearArrays();floodY=H+100;windForce=0;windTimer=200;
     checkpointX=0;checkpointReached=false;
