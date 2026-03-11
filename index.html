@@ -434,7 +434,8 @@ const AU=(()=>{
     bgmInterval=setInterval(()=>bgmTick(th),th.tempo*1000);
   }
   function bgmStop(){if(bgmInterval){clearInterval(bgmInterval);bgmInterval=null;}}
-  function bgmBoss(on){bgmBossMode=on;if(on){bgmStop();bgmStart(bgmWorld,true);}}
+  function bgmBoss(on){if(on&&bgmBossMode)return; // B336: don't restart if already in boss mode
+    bgmBossMode=on;if(on){bgmStop();bgmStart(bgmWorld,true);}}
   function bgmSetMuted(m){muted=m;if(m)bgmStop();else bgmStart(bgmWorld,bgmBossMode);}
 
   function toggleMute(){muted=!muted;if(muted)bgmStop();else bgmStart(bgmWorld,bgmBossMode);return muted;}
@@ -1310,7 +1311,7 @@ function defeat(e,method){
 }
 function shootFB(src,angleOff){
   if(fireballs.length>20)return;
-  const dir=src.vx<=0?-1:1;
+  const dir=src.vx!==0?(src.vx<0?-1:1):(P.x<src.x+src.w/2?-1:1); // B331: fallback to player-relative
   const spd2=world>=7?5.8:world>=4?4.5:3.2;
   const vx=(dir*spd2)*Math.cos(angleOff||0)-(Math.sin(angleOff||0)*2);
   const vy=Math.sin(angleOff||0)*spd2-(angleOff?2:0);
@@ -1820,9 +1821,9 @@ function updateBoss(){
     for(let c=bL;c<=bR&&!hit;c++){if(solid(sg(bBot,c))){boss.y=bBot*TILE-boss.h;if(boss.vy>12){const sx=boss.x+boss.w/2;boss.shockwaves.push({x:sx-60,vx:-4,r:15,life:35,gy:boss.y+boss.h},{x:sx+60,vx:4,r:15,life:35,gy:boss.y+boss.h});burst(sx,boss.y+boss.h,30,'#CC8800',10);screenShake=20;AU.play('poundland');addMsg('GROUND SLAM!','#FF8800');}boss.vy=0;boss.ground=true;hit=true;}}
     if(!hit&&boss.y+boss.h>=13*TILE){if(boss.vy>12){const sx=boss.x+boss.w/2;boss.shockwaves.push({x:sx-60,vx:-4,r:15,life:35,gy:13*TILE},{x:sx+60,vx:4,r:15,life:35,gy:13*TILE});burst(sx,13*TILE,30,'#CC8800',10);screenShake=20;AU.play('poundland');addMsg('GROUND SLAM!','#FF8800');}boss.y=13*TILE-boss.h;boss.vy=0;boss.ground=true;}
   } else if(boss.y+boss.h>=13*TILE){boss.y=13*TILE-boss.h;boss.vy=0;boss.ground=true;}
-  if(boss.x<boss.minX)boss.vx=Math.abs(boss.vx)||(1.5+world*.3);
+  if(boss.x<boss.minX)boss.vx=boss.rage?(boss.rageSpeed||(1.5+world*.3)*1.6):Math.abs(boss.vx)||(1.5+world*.3);
   const bossMaxX=inArena?(ARENA_COLS-2)*TILE:LCOLS*TILE-TILE*2;
-  if(boss.x+boss.w>bossMaxX)boss.vx=-(Math.abs(boss.vx)||(1.5+world*.3));
+  if(boss.x+boss.w>bossMaxX)boss.vx=boss.rage?-(boss.rageSpeed||(1.5+world*.3)*1.6):-(Math.abs(boss.vx)||(1.5+world*.3));
   const rage=boss.rage;
   // Only W3/W7/W9 bears jump — hop toward player height, short controlled arc
   const bossJumps=bossType==='bear'&&(world===3||world===7||world===9);
@@ -1831,7 +1832,7 @@ function updateBoss(){
     if(!boss.jumpT&&boss.ground){
       const jumpPow=world===7?(rage?8:6):(rage?10:8); // Shirokage ghost floats light
       boss.vy=-jumpPow;
-      boss.vx=(P.x>boss.x+boss.w/2?1:-1)*Math.abs(boss.vx||2)*(rage?1.3:1);
+      boss.vx=(P.x>boss.x+boss.w/2?1:-1)*(boss.rage?(boss.rageSpeed||(1.5+world*.3)*1.6):Math.abs(boss.vx||(1.5+world*.3)))*(rage?1:1);
       boss.jumpT=rage?55:Math.max(70,130-world*8);
       screenShake=world===7?4:7;
     }
@@ -1847,7 +1848,7 @@ function updateBoss(){
   if(world>=1){boss.slamT--;if(!boss.slamT&&boss.ground){boss.slamT=rage?Math.floor(boss.slamCd*.55):boss.slamCd;boss.slamRising=true;addMsg('SLAM!','#FF8800');}}
   if(world>=2){boss.chargeT--;if(!boss.chargeT&&boss.ground){boss.chargeT=rage?Math.floor(boss.chargeCd*.55):boss.chargeCd;boss.charging=true;boss.chargeDir=P.x<boss.x?-1:1;boss.chargeDur=rage?32:22;addMsg('CHARGE!!','#FF4400');screenShake=10;}}
   if(world>=4&&bossType!=='wolf'){boss.rockT--;if(!boss.rockT){boss.rockT=rage?Math.floor(boss.rockCd*.55):boss.rockCd;throwRock(boss);if(rage||world>=6)throwRock({...boss,vx:-boss.vx});if(world>=9)throwRock({...boss,x:boss.x+boss.w/2});}}
-  if(!boss.rage&&boss.hp<=boss.maxHp/2){boss.rage=true;boss.vx*=1.6;AU.play('bossroar');addMsg((bossType==='wolf'?boss.wd?.name:boss.bd?.name)+' RAGES!!','#FF0000');screenShake=30;}
+  if(!boss.rage&&boss.hp<=boss.maxHp/2){boss.rage=true;boss.rageSpeed=(Math.abs(boss.vx)||1.5+world*.3)*1.6;boss.vx=(boss.vx>=0?1:-1)*boss.rageSpeed;AU.play('bossroar');addMsg((bossType==='wolf'?boss.wd?.name:boss.bd?.name)+' RAGES!!','#FF0000');screenShake=30;}
   if(!P.dead&&P.inv<=0&&P.x<boss.x+boss.w&&P.x+gW()>boss.x&&P.y<boss.y+boss.h&&P.y+gH()>boss.y){
     const d=UPG.rikiFang.owned?2:1;
     if(P.rallyActive){boss.hp-=d;P.vy=-12;bossHurt();}
@@ -1929,7 +1930,7 @@ function updateGimmick(){
   if(g==='wind'||(g==='all')){
     windTimer--;
     if(windTimer<=0){windTimer=g==='all'?80:Math.floor(Math.random()*180)+100;windForce=(Math.random()-.5)*(g==='all'?3.8:2.6);addMsg(windForce>0?'→ WIND GUST!':'← WIND GUST!','#FF8040');}
-    if(!P.ground)P.x+=windForce*.35;P.vx=Math.max(-6,Math.min(6,P.vx));
+    if(!P.ground&&!vendActive)P.x+=windForce*.35;P.vx=Math.max(-6,Math.min(6,P.vx));
   }
   if(g==='flood'||g==='lava'||g==='all'){
     const lavaMode=(g==='lava');
@@ -1975,12 +1976,12 @@ function respawnInWorld(){
     buildArena(world);
     crumbleTiles={};
     // B285: reset flood to correct position for arena gimmick
-    const adef=ARENA_DEFS[world]||ARENA_DEFS[1];
+    const adef=ARENA_DEFS[Math.min(world-1,9)];
     floodY=adef.gimmick==='lava'?H+80:H+100;
     // B288: reset wolf spawn timer
     if(bossActive&&boss.alive&&bossType==='wolf')boss.wolfSpawnT=boss.wolfSpawnCd;
     P.dead=false;P.inv=90;P.vx=0;P.vy=0;P.ground=false;
-    P.x=3*TILE;P.y=10*TILE;
+    P.x=6*TILE;P.y=10*TILE;
     state='playing';AU.bgmBoss(true);startTimer();
     return;
   }
@@ -2012,10 +2013,11 @@ function onTimeOver(){
       if(world===10){state='gameover';setTimeout(()=>{state='leaderboard';},4000);}
       else{state='leaderboard';}
     } else if(inArena){
-      // Time over inside tower — respawn in arena, give fresh time, boss persists
+      // Time over inside tower — rebuild arena (restore crumbled platforms), give fresh time
+      buildArena(world);crumbleTiles={};
       timeLeft=Math.min(180+world*10,300);
       P.dead=false;P.inv=90;P.vx=0;P.vy=0;P.ground=false;
-      P.x=3*TILE;P.y=10*TILE;
+      P.x=6*TILE;P.y=10*TILE;
       state='playing';AU.bgmBoss(true);startTimer();
     } else {
       state='dead';
@@ -2057,6 +2059,7 @@ function continueFromShop(){
     // if !worldCleared: replay current world, keep remaining lives
     timeLeft=Math.min(500+world*15,700);camX=0;bossActive=false;
     inArena=false;arenaExitOpen=false;clearArrays();floodY=H+100;windForce=0;windTimer=200;
+    comboCount=0;comboTimer=0;
     checkpointX=0;checkpointReached=false;
     buildMap(world);buildEnemies(world);
     const wb=P.big,ws=P.spinStored,wa=P.armyStored;resetP();applyUpg(true);P.big=P.big||wb;P.spinStored+=ws;P.armyStored+=wa;P.momentum=1;
@@ -4529,7 +4532,7 @@ document.addEventListener('keydown',e=>{
     // B304/I139: DPR scaling for sharp canvas on retina/HiDPI screens
     const dpr=window.devicePixelRatio||1;
     CV.width=800*dpr; CV.height=480*dpr;
-    ctx.scale(dpr,dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   scaleCanvas();
   window.addEventListener('resize',scaleCanvas);
