@@ -11,8 +11,8 @@ Growing up, *Ginga: Nagareboshi Gin* was my absolute favorite anime — the epic
 - **Space / W** — Jump (supports double/triple jumps)
 - **X** — Bite
 - **Z** — Battouga
-- **C** — Army (summon/call allies?)
+- **C** — Army (summon/call allies)
 - **Down + in air** — Ground Pound
-- **B** — Vending Machine (item/shop?)
+- **B** — Vending Machine (item/shop)
 
 Built with HTML5/JavaScript (with assistance from Claude AI). Feedback welcome — pull requests or issues appreciated!
