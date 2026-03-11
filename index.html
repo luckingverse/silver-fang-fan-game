@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Ginga Silver Fang">
+<meta name="apple-mobile-web-app-title" content="HOKKYOKU: Sol Fang">
 <meta name="theme-color" content="#060606">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<title>HOKKYOKU: Star Fang</title>
+<title>HOKKYOKU: Sol Fang</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;background:#060606;overflow:hidden;touch-action:none;overscroll-behavior:none;}
@@ -467,6 +467,8 @@ function handleUIClick(gx,gy){
 
   // Title screen
   if(state==='title'){
+    if(easterEggOpen){easterEggOpen=false;return;}
+    if(hitBtn('easter_egg',gx,gy)){easterEggOpen=true;return;}
     if(hitBtn('lb_btn',gx,gy)){state='leaderboard';return;}
     if(hitBtn('lobby_btn',gx,gy)){openLobbyFromTitle();return;}
     if(hitBtn('htp_btn',gx,gy)){state='howtoplay';return;}
@@ -583,13 +585,13 @@ function clrJ(){for(const k in just)delete just[k];}
 
 // ── SKINS ─────────────────────────────────────────────
 const SKINS=[
-  {id:'default',  name:'Star Fang',  unlock:0,     body:'#C0C8D8',belly:'#F0E8C0',eye:'#4080C0',scars:false,ghost:false,gold:false,rainbow:false,dark:false},
+  {id:'default',  name:'Sol Fang',   unlock:0,     body:'#C0C8D8',belly:'#F0E8C0',eye:'#4080C0',scars:false,ghost:false,gold:false,rainbow:false,dark:false},
   {id:'scars',    name:'Battle Scars', unlock:25000, body:'#B0B8C8',belly:'#E8D8C0',eye:'#CC2200',scars:true, ghost:false,gold:false,rainbow:false,dark:false},
-  {id:'ghost',    name:'Ghost Gin',    unlock:50000, body:'#A0C8E8',belly:'#D8EEFF',eye:'#FFFFFF',scars:false,ghost:true, gold:false,rainbow:false,dark:false},
+  {id:'ghost',    name:'Ghost Sol',    unlock:50000, body:'#A0C8E8',belly:'#D8EEFF',eye:'#FFFFFF',scars:false,ghost:true, gold:false,rainbow:false,dark:false},
   {id:'whitefang',name:'White Fang',   unlock:75000, body:'#F0F0F0',belly:'#FFFFFF',eye:'#FF2200',scars:false,ghost:false,gold:false,rainbow:false,dark:false},
   {id:'general',  name:'Hokuzan General',  unlock:100000,body:'#D4A830',belly:'#FFE870',eye:'#FF8800',scars:false,ghost:false,gold:true, rainbow:false,dark:false},
   {id:'shadow',   name:'Shadow Wolf',  unlock:150000,body:'#2A1840',belly:'#1A0830',eye:'#CC00FF',scars:false,ghost:false,gold:false,rainbow:false,dark:true},
-  {id:'legendary',name:'Legendary Gin',unlock:200000,body:'#C0C8D8',belly:'#F0E8C0',eye:'#FFD700',scars:false,ghost:false,gold:false,rainbow:true, dark:false},
+  {id:'legendary',name:'Legendary Sol',unlock:200000,body:'#C0C8D8',belly:'#F0E8C0',eye:'#FFD700',scars:false,ghost:false,gold:false,rainbow:true, dark:false},
 ];
 let currentSkin=0,unlockedSkins=[0],skinNotif=null;
 function checkSkinUnlocks(){
@@ -917,7 +919,7 @@ let comboCount=0,comboTimer=0; // kill combo chain
 const UPG={
   extraLife: {cost:20,owned:0,max:3,tier:'perm',label:'Extra Life',     desc:'+1 life permanently',       icon:'❤️'},
   tripleJump:{cost:30,owned:0,max:1,tier:'perm',label:'Triple Jump',    desc:'3 mid-air jumps forever',   icon:'🌀'},
-  startBig:  {cost:40,owned:0,max:1,tier:'perm',label:'Start Big',      desc:'Always begin as Big Gin',   icon:'🐕'},
+  startBig:  {cost:40,owned:0,max:1,tier:'perm',label:'Start Big',      desc:'Always begin as Big Sol',   icon:'🐕'},
   rikiFang:  {cost:50,owned:0,max:1,tier:'perm',label:"Riki's Fang",    desc:'Deal 2× damage to boss',    icon:'👊'},
   magnet:    {cost:35,owned:0,max:1,tier:'perm',label:'Coin Magnet',    desc:'Auto-collect nearby coins', icon:'🧲'},
   speedBuff: {cost:8, owned:0,max:1,tier:'buff',label:'Adrenaline',     desc:'+speed for this world',     icon:'⚡'},
@@ -945,7 +947,7 @@ let vendPos=0,vendActive=false,vendCursor=0,vendNearby=false;
 let lbEntries=[],lbNameInput=playerName,lbEntering=false,pendingLbScore=0,lbAfterShop=false,pendingLbTimeout=null;
 let lastMilestone=0;
 const VEND_ITEMS=[
-  {label:'Big Gin 🐕',cost:3,type:'GROW'},{label:'Battouga 🌀',cost:4,type:'SPIN'},
+  {label:'Big Sol 🐕',cost:3,type:'GROW'},{label:'Battouga 🌀',cost:4,type:'SPIN'},
   {label:'War Howl 🐺',cost:5,type:'HOWL'},{label:'Adrenaline ⚡',cost:3,type:'SPEED'},
   {label:'Hokuzan Rally 🏅',cost:6,type:'RALLY'},
 ];
@@ -1094,7 +1096,7 @@ function dur(){return wbTime;}
 
 function smashTile(r,c){
   const key=r+','+c,t=sg(r,c);if(bumped.has(key)||!breakable(t))return;
-  if(t==='R'&&!P.big){floatUp('Need Big Gin!',c*TILE+16,r*TILE,'#C0A060');return;}
+  if(t==='R'&&!P.big){floatUp('Need Big Sol!',c*TILE+16,r*TILE,'#C0A060');return;}
   bumped.add(key);map[r][c]='.';
   burst(c*TILE+16,r*TILE+16,10,t==='S'?'#DDD':t==='B'?'#6A9030':'#9A7848',5);
   floatUp(P.big?'SMASH!':'crack!',c*TILE+16,r*TILE,P.big?'#FF8800':'#C0A060');
@@ -1221,7 +1223,7 @@ function updAllies(){
 }
 
 // ── POWER-UPS ─────────────────────────────────────────
-const PNAME={GROW:'🐕 BIG GIN!',SPIN:'🌀 BATTOUGA!',HOWL:'🐺 WAR HOWL!',RALLY:'🏅 OHU RALLY!',SPEED:'⚡ ADRENALINE!',STAR:'⭐ OHU ARMY READY!'};
+const PNAME={GROW:'🐕 BIG SOL!',SPIN:'🌀 BATTOUGA!',HOWL:'🐺 WAR HOWL!',RALLY:'🏅 OHU RALLY!',SPEED:'⚡ ADRENALINE!',STAR:'⭐ OHU ARMY READY!'};
 const PCOL={GROW:'#90C860',SPIN:'#60A8FF',HOWL:'#FF9020',RALLY:'#F0C840',SPEED:'#FF60A0',STAR:'#FFE840'};
 function activatePow(type){
   const d=dur();
@@ -1231,11 +1233,11 @@ function activatePow(type){
       P.giga=true;P.gigaTimer=300;
       screenShake=30;
       burst(P.x+gW()/2,P.y+gH()/2,50,'#FF8800',12);
-      addMsg('🔥 GIGA GIN!! 🔥','#FF8800');
-      floatUp('GIGA GIN!!!',P.x,P.y-35,'#FF6600');
+      addMsg('🔥 GIGA SOL!! 🔥','#FF8800');
+      floatUp('GIGA SOL!!!',P.x,P.y-35,'#FF6600');
       AU.play('giga');score+=1000;return;
     }
-    P.big=true;P.y-=16;addMsg('BIG GIN!!','#90C860');AU.play('powerup');
+    P.big=true;P.y-=16;addMsg('BIG SOL!!','#90C860');AU.play('powerup');
   }
   else if(type==='SPIN'){P.spinStored=Math.min(P.spinStored+1,3);addMsg('BATTOUGA ×'+P.spinStored+'!','#60A8FF');burst(P.x+gW()/2,P.y+gH()/2,18,'#60A8FF',7);floatUp('🌀 ×'+P.spinStored,P.x,P.y-35,'#60A8FF');AU.play('powerup');score+=300;return;}
   else if(type==='HOWL'){P.howlActive=true;P.howlTimer=300+d;for(const e of enemies)if(e.alive&&!e.squished)e.frozen=180+d;for(const w of wolfPack)if(w.alive&&!w.squished)w.frozen=180+d;if(bossActive&&boss.alive)boss.frozen=180+d;screenShake=20;addMsg('WAR HOWL!','#FF9020');AU.play('powerup');}
@@ -1605,7 +1607,7 @@ function bossDie(){
     const nm=bossType==='wolf'?(boss.wd?.name||'WOLF ALPHA'):(boss.bd?.name||'BEAR BOSS');
     addMsg(nm+' DEFEATED! +'+pts,'#FFD700');
     // Social share prompt
-    try{if(navigator.share)setTimeout(()=>navigator.share({title:'Ginga Silver Fang',text:`I defeated ${nm} in World ${world}! Score: ${score} 🐺⚔️`,url:location.href}).catch(()=>{}),3200);}catch(e){}
+    try{if(navigator.share)setTimeout(()=>navigator.share({title:'HOKKYOKU: Sol Fang',text:`I defeated ${nm} in World ${world}! Score: ${score} 🐺⚔️`,url:location.href}).catch(()=>{}),3200);}catch(e){}
     setTimeout(()=>{
       if(inArena){arenaExitOpen=true;addMsg('EXIT PORTAL OPEN — walk to the right!','#00FF80');}
       else{goLobby(1);}
@@ -1669,7 +1671,7 @@ function updateAkaguma(){
     if(!inArena&&boss.x+boss.w>boss.cliffX){
       // Trigger cliff finish!
       akaCliffKill=false;
-      addMsg('GIN LURES HIM OVER THE EDGE!!','#FFD700');
+      addMsg('SOL LURES HIM OVER THE EDGE!!','#FFD700');
       screenShake=60;AU.play('worldclear');
       bossDie();return;
     }
@@ -1717,7 +1719,7 @@ function updateAkaguma(){
   } else if(boss.y+boss.h>=13*TILE){boss.y=13*TILE-boss.h;boss.vy=0;boss.ground=true;}
   // Keep in arena, chase Gin in phase 3
   if(akaPhase===3){
-    // Charge toward Gin relentlessly
+    // Charge toward Sol relentlessly
     boss.vx=P.x>boss.x+boss.w/2?3:-3;
   } else {
     if(boss.x<boss.minX)boss.vx=Math.abs(boss.vx);
@@ -1876,30 +1878,48 @@ function floatUp(txt,x,y,col='#F0C040'){floats.push({txt,x,y,vy:-1.5,life:65,max
 function addMsg(txt,col){screenMsgs.push({txt,col,life:160,y:H/2-60});}
 
 // Wrap localStorage safely for iOS local file://
-const safeStorage={
-  get(k){try{return localStorage.getItem(k);}catch{return null;}},
-  set(k,v){try{localStorage.setItem(k,v);}catch{}}
-};
+// ── SUPABASE LEADERBOARD ──────────────────────────────
+const SB_URL='https://akrfsqaqmvzxqqfhqnfz.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrcmZzcWFxbXZ6eHFxZmhxbmZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTY0MDIsImV4cCI6MjA4ODc3MjQwMn0.N8cml9is-TXB79b1dR3dba-rcBao2SPCjg6q8UwzBh0';
+
+// Signature — obfuscated game token, not a secret key
+// Combines a base token with score+world to make each submission unique
+function makeSig(score,world){
+  const base='HKY-SF-'+String(score*7+world*13+42);
+  let h=0;for(let i=0;i<base.length;i++){h=(h<<5)-h+base.charCodeAt(i);h|=0;}
+  return 'sf'+Math.abs(h).toString(36)+'x'+world;
+}
 
 async function loadLB(){
   try{
-    if(window.storage){const r=await window.storage.get('ginga-lb-v2',true);lbEntries=r?JSON.parse(r.value):[];}
-    else{const r=safeStorage.get('ginga-lb-v2');lbEntries=r?JSON.parse(r):[];}
+    const r=await fetch(`${SB_URL}/rest/v1/leaderboard?select=name,score,world&order=score.desc&limit=10`,{
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    if(r.ok)lbEntries=await r.json();
+    else lbEntries=[];
   }catch{lbEntries=[];}
 }
-async function saveLB(){
-  try{
-    if(window.storage){await window.storage.set('ginga-lb-v2',JSON.stringify(lbEntries),true);}
-    else{safeStorage.set('ginga-lb-v2',JSON.stringify(lbEntries));}
-  }catch{}
-}
+
 async function submitScore(name){
   const n=(name||playerName||'Unknown').trim().slice(0,12)||'Unknown';
   playerName=n;
   try{localStorage.setItem('ginga_name',n);}catch(e){}
-  lbEntries.push({name:n,score:pendingLbScore,world});
-  lbEntries.sort((a,b)=>b.score-a.score);lbEntries=lbEntries.slice(0,10);
-  await saveLB();lbEntering=false;
+  const sig=makeSig(pendingLbScore,world);
+  try{
+    await fetch(`${SB_URL}/rest/v1/leaderboard`,{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify({name:n,score:pendingLbScore,world,sig})
+    });
+  }catch{}
+  // Refresh leaderboard from server
+  await loadLB();
+  lbEntering=false;
 }
 
 // ── GIMMICK UPDATE ────────────────────────────────────
@@ -2004,7 +2024,7 @@ function onTimeOver(){
 function killP(){
   if(P.dead)return;if(P.rallyActive)return;
   if(P.armor){P.armor=false;P.inv=90;burst(P.x+gW()/2,P.y+gH()/2,20,'#8888CC',5);floatUp('ARMOR BROKEN!',P.x,P.y-20,'#AAAAEE');AU.play('hit');return;}
-  if(P.big){P.big=false;P.inv=90;burst(P.x+gW()/2,P.y+gH()/2,20,'#90C860',5);floatUp('Big Gin lost!',P.x,P.y-20,'#FF8800');AU.play('hit');return;}
+  if(P.big){P.big=false;P.inv=90;burst(P.x+gW()/2,P.y+gH()/2,20,'#90C860',5);floatUp('Big Sol lost!',P.x,P.y-20,'#FF8800');AU.play('hit');return;}
   P.dead=true;P.vy=-12;P.vx=0;P.dTimer=200;clearInterval(timerID);screenShake=22;AU.play('death');hap(80);AU.bgmStop(); // I124
 }
 function onDead(){
@@ -2045,6 +2065,7 @@ function continueFromShop(){
 
 // ── PAUSE ─────────────────────────────────────────────
 let paused=false;
+let easterEggOpen=false;
 function togglePause(){
   if(state!=='playing')return;
   paused=!paused;
@@ -2850,7 +2871,7 @@ function drawGin(){
   const px=Math.round(P.x-camX),py=Math.round(P.y);
   ctx.save();
 
-  // ── GIGA GIN aura ──
+  // ── GIGA SOL aura ──
   if(P.giga){
     const gt=P.gigaTimer;
     const pulse=.3+Math.sin(frame*.18)*.18;
@@ -3595,7 +3616,7 @@ function drawHUD(){
   const hasP=P.spinActive||P.howlActive||P.rallyActive||P.speedActive||P.big;
   if(hasP){
     const permSpeed=P.speedActive&&P.speedTimer>9990;
-    const nm=P.rallyActive?'🏅 OHU RALLY':P.spinActive?'🌀 BATTOUGA SPIN':P.howlActive?'🐺 WAR HOWL':P.speedActive?(permSpeed?'⚡ ADRENALINE ∞':'⚡ ADRENALINE'):P.big?'🐕 BIG GIN':'';
+    const nm=P.rallyActive?'🏅 OHU RALLY':P.spinActive?'🌀 BATTOUGA SPIN':P.howlActive?'🐺 WAR HOWL':P.speedActive?(permSpeed?'⚡ ADRENALINE ∞':'⚡ ADRENALINE'):P.big?'🐕 BIG SOL':'';
     const pt=P.rallyTimer||P.spinTimer||P.howlTimer||(permSpeed?0:P.speedTimer)||(P.big?999:0);
     const ptMax=P.rallyActive?420:P.spinActive?600:P.howlActive?360:P.speedActive?480:999;
     const pc2=P.rallyActive?'#F0C840':P.spinActive?'#60A8FF':P.howlActive?'#FF9020':P.speedActive?'#FF60A0':'#90C860';
@@ -3645,7 +3666,7 @@ function drawHUD(){
     ctx.fillStyle=gc2;ctx.fillRect(W/2-130,H-52,260*gp,16);
     ctx.strokeStyle='#FF8800';ctx.lineWidth=1;ctx.strokeRect(W/2-130,H-52,260,16);
     ctx.fillStyle='#FFF';ctx.font='bold 10px monospace';ctx.textAlign='center';
-    ctx.fillText('🔥 GIGA GIN  '+Math.ceil(P.gigaTimer/60)+'s  — GROUND POUND SPLASH ACTIVE',W/2,H-54);
+    ctx.fillText('🔥 GIGA SOL  '+Math.ceil(P.gigaTimer/60)+'s  — GROUND POUND SPLASH ACTIVE',W/2,H-54);
   }
   // Screen messages
   for(const m of screenMsgs){ctx.save();ctx.globalAlpha=Math.min(m.life/40,1);ctx.shadowBlur=8;ctx.shadowColor='#000';ctx.fillStyle=m.col;ctx.font='bold 26px Georgia';ctx.textAlign='center';ctx.fillText(m.txt,W/2,m.y);ctx.restore();}
@@ -4062,7 +4083,7 @@ function drawNameEntry(){
   ctx.fillStyle='#F0D060';ctx.font='bold 36px Georgia';ctx.shadowColor='#C88000';ctx.shadowBlur=20;
   ctx.fillText('HOKKYOKU',W/2,H*.28);ctx.shadowBlur=0;
   ctx.fillStyle='#C8A040';ctx.font='bold 16px Georgia';
-  ctx.fillText('STAR FANG',W/2,H*.28+30);
+  ctx.fillText('SOL FANG',W/2,H*.28+30);
   // Name prompt
   ctx.fillStyle='#F0E8C0';ctx.font='18px Georgia';
   ctx.fillText('Enter your name to begin:',W/2,H*.5-20);
@@ -4251,10 +4272,18 @@ function drawTitle(){
   ctx.shadowBlur=0;
   // Subtitle line
   ctx.fillStyle='rgba(200,170,80,.7)';ctx.font='14px Georgia';
-  ctx.fillText('〜  流れ星銀  〜',W/2,H*.5+22);
+  ctx.fillText('〜  Sol Fang  〜',W/2,H*.5+22);
   // English subtitle
   ctx.fillStyle='rgba(160,130,60,.6)';ctx.font='12px monospace';
-  ctx.fillText('NAGAREBOSHI GIN  —  SILVER FANG',W/2,H*.5+42);
+  ctx.fillText('HOKKYOKU: SOL FANG',W/2,H*.5+42);
+
+  // Easter egg ? button — subtle, bottom-left corner
+  const eggAlpha=0.18+Math.sin(frame*.04)*.06;
+  ctx.globalAlpha=eggAlpha;
+  ctx.fillStyle='#C8A040';ctx.font='bold 13px Georgia';ctx.textAlign='left';
+  ctx.fillText('?',14,H-14);
+  ctx.globalAlpha=1;
+  lobbyBtns['easter_egg']={x:8,y:H-26,w:22,h:20};
 
   // ── BUTTONS — stacked vertically, no overlap ──
   const btnBaseY = H*0.60;
@@ -4322,8 +4351,8 @@ function drawLeaderboard(){
     uiBtn('lb_submit',W/2-110,164,100,24,'✓  SUBMIT',{col:'#40C860',textCol:'#C0FFD0',font:'bold 11px Georgia',sel:true});
     uiBtn('lb_skip',W/2+10,164,100,24,'→  SKIP',{col:'#806040',textCol:'#C0A860',font:'bold 11px Georgia'});
   }else{
-    ctx.fillStyle='#F0E080';ctx.font='16px Georgia';ctx.fillText('— TOP 10 LEADERBOARD —',W/2,116);
-    if(lbEntries.length===0){ctx.fillStyle='#807050';ctx.fillText('No scores yet — beat World 10 to enter!',W/2,180);}
+    ctx.fillStyle='#F0E080';ctx.font='16px Georgia';ctx.fillText('— GLOBAL TOP 10 —',W/2,116);
+    if(lbEntries.length===0){ctx.fillStyle='#807050';ctx.fillText('No scores yet — be the first to submit!',W/2,180);}
     for(let i=0;i<Math.min(lbEntries.length,10);i++){
       const e=lbEntries[i],y=140+i*30;
       const medal=['🥇','🥈','🥉'][i]||'  '+(i+1);
@@ -4337,13 +4366,38 @@ function drawLeaderboard(){
   ctx.restore();ctx.textAlign='left';
 }
 
+function drawEasterEgg(){
+  if(!easterEggOpen)return;
+  // Elegant dark overlay
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.88)';ctx.fillRect(W/2-190,H/2-90,380,180);
+  ctx.strokeStyle='rgba(200,160,40,.6)';ctx.lineWidth=1.5;ctx.strokeRect(W/2-190,H/2-90,380,180);
+  ctx.textAlign='center';
+  // Sol
+  ctx.fillStyle='#F4E0A0';ctx.font='bold 42px Georgia';ctx.shadowColor='rgba(200,160,40,.8)';ctx.shadowBlur=18;
+  ctx.fillText('Sol',W/2,H/2-32);ctx.shadowBlur=0;
+  // Divider
+  ctx.strokeStyle='rgba(200,160,40,.3)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W/2-140,H/2-14);ctx.lineTo(W/2+140,H/2-14);ctx.stroke();
+  // Etymology
+  ctx.fillStyle='rgba(200,170,100,.85)';ctx.font='italic 14px Georgia';
+  ctx.fillText("from the Danish  'sølv'  —  silver",W/2,H/2+12);
+  // Tribute
+  ctx.fillStyle='rgba(160,130,70,.7)';ctx.font='12px Georgia';
+  ctx.fillText('A tribute to Gin and the mountains of Ōu',W/2,H/2+38);
+  // Dismiss hint
+  ctx.fillStyle='rgba(120,100,50,.5)';ctx.font='10px monospace';
+  ctx.fillText('click anywhere to close',W/2,H/2+68);
+  ctx.restore();ctx.textAlign='left';
+}
+
 function render(){
   // I153: hide touch controls during menus
   const _tui=document.getElementById('touch-ui');
   if(_tui){const _menuState=['title','howtoplay','nameentry','lobby','leaderboard','dead','timeover','gameover'].includes(state);_tui.style.visibility=_menuState?'hidden':'visible';}
   if(state==='nameentry'){drawNameEntry();return;}
   if(state==='howtoplay'){drawHowToPlay();return;}
-  if(state==='title'){drawTitle();return;}
+  if(state==='title'){drawTitle();drawEasterEgg();return;}
   if(state==='intro'){drawIntro();return;}
   if(state==='lobby'){drawLobby();return;}
   if(state==='leaderboard'){drawLeaderboard();return;}
@@ -4401,7 +4455,7 @@ function render(){
   // HUD and vend drawn AFTER dark overlay so they're always visible
   drawHUD();
   if(vendActive)drawVend();
-  if(state==='dead')drawOverlay('GIN FALLS...',inArena?'PRESS SPACE TO RETRY BOSS ARENA':'PRESS SPACE TO RETRY WORLD '+world,'Lives: '+lives+'  |  Bank: 🪙'+coinBank+(checkpointReached&&!inArena?' [checkpoint saved]':''));
+  if(state==='dead')drawOverlay('SOL FALLS...',inArena?'PRESS SPACE TO RETRY BOSS ARENA':'PRESS SPACE TO RETRY WORLD '+world,'Lives: '+lives+'  |  Bank: 🪙'+coinBank+(checkpointReached&&!inArena?' [checkpoint saved]':''));
   else if(state==='gameover')drawOverlay('AKAGUMA WINS','PRESS SPACE TO TRY AGAIN  |  Leaderboard in 4s...','Score: '+score.toLocaleString()+'  |  Reached World '+world+'  |  赤熊 defeated you','#CC6040');
   else if(state==='timeover'){
     ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,0,W,H);
