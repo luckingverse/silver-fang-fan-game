@@ -2047,7 +2047,7 @@ function goLobby(tab=1){coinBank+=coins;coins=0;state='lobby';shopCursor=0;shopT
 }
 // Keep goShop as alias for compatibility
 function goShop(){goLobby(1);}
-function openLobbyFromTitle(){state='lobby';shopTab=2;shopCursor=0;skinShopCursor=0;AU.bgmStop();}
+function openLobbyFromTitle(){lives=3+UPG.extraLife.owned;state='lobby';shopTab=2;shopCursor=0;skinShopCursor=0;AU.bgmStop();}
 function continueFromShop(){
   startTransition(()=>{
     if(worldCleared){
@@ -2055,8 +2055,8 @@ function continueFromShop(){
       world=Math.min(world+1,10);
       lives=3+UPG.extraLife.owned; // new world = full lives
     }
-    if(score===0)lives=3+UPG.extraLife.owned; // fresh game from lobby
-    // if !worldCleared: replay current world, keep remaining lives
+    // Only reset lives if this is a brand new game (came from title/startGame)
+    // Don't reset if player died and visited lobby mid-run
     timeLeft=Math.min(500+world*15,700);camX=0;bossActive=false;
     inArena=false;arenaExitOpen=false;clearArrays();floodY=H+100;windForce=0;windTimer=200;
     checkpointX=0;checkpointReached=false;
