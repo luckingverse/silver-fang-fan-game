@@ -47,12 +47,6 @@ canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%
 }
 
 /* WORLDS — top-left, small and unobtrusive */
-#btn-dev{
-  width:52px;height:52px;border-radius:10px;font-size:9px;
-  background:rgba(20,14,4,.6);border-color:rgba(160,120,30,.45);
-  top:10px;left:10px;
-}
-
 /* ── PORTRAIT ── */
 @media (orientation:portrait){
   /* Bottom-left: movement */
@@ -107,7 +101,7 @@ canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%
 
 <!-- Touch controls — shown only on touch devices -->
 <div id="touch-ui">
-  <div class="touch-btn" id="btn-dev">⚙<br><span style="font-size:9px">WORLDS</span></div>
+
   <div class="touch-btn" id="btn-pause">⏸<br><span style="font-size:9px">PAUSE</span></div>
   <div class="touch-btn" id="btn-left">◀</div>
   <div class="touch-btn" id="btn-right">▶</div>
@@ -121,7 +115,7 @@ canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%
 <script>
 const CV=document.getElementById('c'),ctx=CV.getContext('2d');
 const W=800,H=480,TILE=32,ROWS=15,LCOLS=330;
-const DEV_MODE=false; // production
+
 const VERSION='1.0.0'; // I120
 // I124: haptic helper
 function hap(ms){try{if(navigator.vibrate)navigator.vibrate(ms);}catch(e){}}
@@ -446,7 +440,7 @@ const AU=(()=>{
   function toggleMute(){muted=!muted;if(muted)bgmStop();else bgmStart(bgmWorld,bgmBossMode);return muted;}
   return{play,toggleMute,init,resume,bgmStart,bgmStop,bgmBoss,get muted(){return muted;}};
 })();
-const GAME_KEYS=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Digit0','Digit9','Backquote','KeyA','KeyD','KeyW','KeyS','KeyX','KeyZ','KeyC','KeyB','KeyQ','KeyM','KeyP','KeyK','Enter','Escape','Backspace'];
+const GAME_KEYS=['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab','Backquote','KeyA','KeyD','KeyW','KeyS','KeyX','KeyZ','KeyC','KeyB','KeyQ','KeyM','KeyP','KeyK','Enter','Escape','Backspace'];
 document.addEventListener('keydown',e=>{
   AU.resume();
   // Don't block typing keys when entering name or leaderboard name
@@ -458,20 +452,6 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 // ── UNIFIED CLICK / TAP HANDLER ───────────────────────
 function handleUIClick(gx,gy){
-  // Dev menu
-  if(devMenu){
-    const pw=320,ph=380,px2=(W-pw)/2,py2=(H-ph)/2;
-    if(gx>=px2&&gx<=px2+pw&&gy>=py2&&gy<=py2+ph){
-      const rowY=gy-(py2+80);
-      if(rowY>=0){const row=Math.floor(rowY/27);if(row>=0&&row<=9){
-        const dw=row+1;devMenu=false;score=0;coins=0;world=dw;lastMilestone=0;clearArrays();
-        inArena=false;arenaExitOpen=false;bossActive=false;camX=0;shopTab=0;wbFang=0;wbTime=0;floodY=H+100;windForce=0;windTimer=200;crumbleTiles={};
-        clearInterval(timerID);buildMap(dw);buildEnemies(dw);resetP();applyUpg();showIntro();
-      }}
-    }else devMenu=false;
-    return;
-  }
-
   // Name entry
   if(state==='nameentry'){
     if(lbNameInput.trim().length>0){
@@ -955,8 +935,8 @@ const firstLaunch=!localStorage.getItem('ginga_played');
 if(firstLaunch)try{localStorage.setItem('ginga_played','1');}catch(e){}
 let state='nameentry',score=0,lives=3,coins=0,timeLeft=500,world=1;
 let transitionAlpha=0,transitionDir=0,transitionCb=null; // fade transition system
-let devMenu=false,devCursor=1;
-let frame=0,camX=0,screenShake=0,bossActive=false,worldCleared=true,timerID=null;
+
+let frame=0,camX=0,screenShake=0,bossActive=false,worldCleared=false,timerID=null;
 let particles=[],floats=[],screenMsgs=[],items=[],bumpAnims=[],fireballs=[],rocks=[],allies=[];
 const bumped=new Set();
 let wbFang=0,wbTime=0,introTimer=0,introPct=0;
@@ -1956,7 +1936,7 @@ function updateGimmick(){
 // ── GAME FLOW ─────────────────────────────────────────
 function clearArrays(){particles=[];floats=[];items=[];bumpAnims=[];screenMsgs=[];fireballs=[];rocks=[];allies=[];wolfPack=[];enemies=[];bossType='bear';akaPhase=1;akaCliffKill=false;akaDeathSeq=0;akaIntro=0;bossIntro=0;darkRadius=260;} // B289
 function startGame(){
-  score=0;coins=0;world=1;lastMilestone=0;comboCount=0;comboTimer=0;worldCleared=true;clearArrays();inArena=false;arenaExitOpen=false;
+  score=0;coins=0;world=1;lastMilestone=0;comboCount=0;comboTimer=0;worldCleared=false;clearArrays();inArena=false;arenaExitOpen=false;
   lives=3+UPG.extraLife.owned;
   bossActive=false;camX=0;shopTab=0;wbFang=0;wbTime=0;floodY=H+100;windForce=0;windTimer=200;
   lbNameInput=playerName; // pre-fill name for leaderboard
@@ -2092,32 +2072,6 @@ function update(){
     state='lobby';shopTab=0;shopCursor=0;skinShopCursor=0;clrJ();return;
   }
   if(paused){clrJ();return;}
-  // DEV: K — +10,000 coins to bank
-  if(DEV_MODE&&just['KeyK']){coinBank+=10000;addMsg('💰 DEV: +10,000 coins (bank: '+coinBank+')','#FFD700');clrJ();}
-  // DEV: 9 — instant quit to title from anywhere
-  if(DEV_MODE&&just['Digit9']){
-    devMenu=false;vendActive=false;clearInterval(timerID);AU.bgmStop();
-    pendingLbScore=score;state='leaderboard';lbEntering=true;lbNameInput=playerName;clrJ();return;
-  }
-  // DEV: 0 — open/close world select menu from anywhere except leaderboard
-  if(DEV_MODE&&just['Digit0']&&state!=='leaderboard'){
-    devMenu=!devMenu;clrJ();return;
-  }
-  if(devMenu){
-    if(just['ArrowUp']||just['KeyW'])devCursor=Math.max(1,devCursor-1);
-    if(just['ArrowDown']||just['KeyS'])devCursor=Math.min(10,devCursor+1);
-    if(just['Enter']){
-      const w=devCursor;devMenu=false;
-      score=0;coins=0;world=w;lastMilestone=0;clearArrays();
-      inArena=false;arenaExitOpen=false;checkpointX=0;checkpointReached=false;
-      bossActive=false;camX=0;shopTab=0;wbFang=0;wbTime=0;
-      floodY=H+100;windForce=0;windTimer=200;crumbleTiles={};
-      clearInterval(timerID);
-      buildMap(w);buildEnemies(w);resetP();applyUpg();showIntro();
-    }
-    if(just['Digit0']||just['Escape'])devMenu=false;
-    clrJ();return;
-  }
   // NAME ENTRY (first screen)
   if(state==='nameentry'){
     frame++;
@@ -4318,8 +4272,6 @@ function drawTitle(){
   // Feature line — below all buttons
   ctx.fillStyle='rgba(140,110,50,.5)';ctx.font='10px monospace';ctx.textAlign='center';
   ctx.fillText('10 Worlds · Checkpoints · Hokuzan Army · Score Skins · Giga Kiba',W/2,btnBaseY+156);
-  if(DEV_MODE){ctx.fillStyle='rgba(80,60,30,.4)';ctx.font='9px monospace';
-  ctx.fillText('DEV: 0 = world select · K = +coins',W/2,btnBaseY+138);}
   // Daily bonus notification
   if(window._dailyBonus){
     const db=window._dailyBonus;
@@ -4383,49 +4335,6 @@ function drawLeaderboard(){
     uiBtn('lb_play_btn',W/2-90,H-54,180,30,'▶  PLAY AGAIN',{col:'#40C860',textCol:'#C0FFD0',font:'bold 13px Georgia',sel:true,accent:'#40C860'});
   }
   ctx.restore();ctx.textAlign='left';
-}
-
-// ── DEV WORLD SELECT ──────────────────────────────────
-function drawDevMenu(){
-  if(!devMenu)return;
-  // Dark overlay
-  ctx.fillStyle='rgba(0,0,0,.82)';ctx.fillRect(0,0,W,H);
-  ctx.save();ctx.textAlign='center';
-  // Panel
-  const pw=320,ph=380,px2=(W-pw)/2,py2=(H-ph)/2;
-  ctx.fillStyle='#0A1018';ctx.fillRect(px2,py2,pw,ph);
-  ctx.strokeStyle='#F0C840';ctx.lineWidth=2;ctx.strokeRect(px2,py2,pw,ph);
-  // Header
-  ctx.fillStyle='#F0C840';ctx.font='bold 16px Georgia';
-  ctx.fillText('⚙  DEV — WORLD SELECT',W/2,py2+28);
-  ctx.fillStyle='rgba(240,200,64,.3)';ctx.fillRect(px2,py2+34,pw,1);
-  ctx.fillStyle='#806040';ctx.font='10px monospace';
-  ctx.fillText('↑↓ navigate  •  Enter = jump in  •  0 or Esc = close',W/2,py2+50);
-  ctx.fillStyle='rgba(160,100,40,.5)';ctx.font='10px monospace';
-  ctx.fillText('9 = quit to title instantly from anywhere',W/2,py2+64);
-
-  const WNAMES=['Futago Pass','Snow Peak','Dark Forest','Volcanic Ridge',
-                'Hokuzan Abyss','Storm Cliffs','Haunted Ruins','Crystal Caverns',
-                'Sky Peaks','Hokuzan Summit'];
-  const WICONS=['🏔','❄','👁','🌋','💀','🌊','👻','💎','☁','⚡'];
-  for(let i=1;i<=10;i++){
-    const wy=py2+80+(i-1)*27;
-    const sel=devCursor===i;
-    if(sel){ctx.fillStyle='rgba(240,200,64,.18)';ctx.fillRect(px2+8,wy-16,pw-16,24);}
-    ctx.fillStyle=sel?'#F0E060':'#A09060';
-    ctx.font=(sel?'bold ':'')+'13px Georgia';
-    ctx.textAlign='left';
-    ctx.fillText(`  ${WICONS[i-1]}  W${i} — ${WNAMES[i-1]}`,px2+16,wy);
-    if(sel){ctx.fillStyle='#F0C840';ctx.textAlign='right';ctx.fillText('▶',px2+pw-16,wy);}
-  }
-  // Current world indicator
-  ctx.textAlign='center';ctx.fillStyle='rgba(160,130,60,.55)';ctx.font='10px monospace';
-  ctx.fillText('currently on World '+world,W/2,py2+ph-14);
-  // Version display — bottom-right (I120)
-  ctx.fillStyle='rgba(100,80,40,.4)';ctx.font='9px monospace';ctx.textAlign='right';
-  ctx.fillText('v'+VERSION,W-8,H-6);
-
-  ctx.restore();
 }
 
 function render(){
@@ -4529,7 +4438,6 @@ function render(){
     ctx.fillText('[P/ESC] resume  [M] mute  [L] lobby',W/2,b3y+bh+12);
     ctx.restore();
   }
-  drawDevMenu();
 }
 
 // ── BOOT ─────────────────────────────────────────────
@@ -4581,7 +4489,6 @@ document.addEventListener('keydown',e=>{
     'btn-spin' :['KeyZ'],
     'btn-army' :['KeyC'],
     'btn-vend' :['KeyB'],
-    'btn-dev'  :['Digit0'],
     'btn-pause':['KeyP'],
   };
 
