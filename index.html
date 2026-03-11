@@ -1083,10 +1083,10 @@ function resetP(){
      howlActive:false,howlTimer:0,rallyActive:false,rallyTimer:0,
      speedActive:false,speedTimer:0,speedPerm:false,biteActive:false,biteTimer:0};
 }
-function applyUpg(){
+function applyUpg(resetLives=false){
   if(UPG.startBig.owned)P.big=true;
   P.jumps=UPG.tripleJump.owned?3:2;
-  lives=3+UPG.extraLife.owned;
+  if(resetLives)lives=3+UPG.extraLife.owned;
   if(UPG.speedBuff.owned){P.speedActive=true;P.speedTimer=9999;P.speedPerm=true;UPG.speedBuff.owned=0;}
   if(UPG.armorBuff.owned){P.armor=true;UPG.armorBuff.owned=0;}
   wbFang=UPG.fangBuff.owned?14:0;if(UPG.fangBuff.owned)UPG.fangBuff.owned=0;
@@ -1966,7 +1966,7 @@ function startGame(){
   try{const el=document.documentElement;(el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen||function(){}).call(el);}catch(e){}
   // I118: prevent screen from sleeping during gameplay
   if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});
-  buildMap(1);buildEnemies(1);resetP();applyUpg();showIntro();
+  buildMap(1);buildEnemies(1);resetP();applyUpg(true);showIntro();
 }
 function respawnInWorld(){
   if(pendingLbTimeout){clearTimeout(pendingLbTimeout);pendingLbTimeout=null;} // B272
@@ -2047,21 +2047,19 @@ function goLobby(tab=1){coinBank+=coins;coins=0;state='lobby';shopCursor=0;shopT
 }
 // Keep goShop as alias for compatibility
 function goShop(){goLobby(1);}
-function openLobbyFromTitle(){lives=3+UPG.extraLife.owned;state='lobby';shopTab=2;shopCursor=0;skinShopCursor=0;AU.bgmStop();}
+function openLobbyFromTitle(){state='lobby';shopTab=2;shopCursor=0;skinShopCursor=0;AU.bgmStop();}
 function continueFromShop(){
   startTransition(()=>{
     if(worldCleared){
       worldCleared=false;
       world=Math.min(world+1,10);
-      lives=3+UPG.extraLife.owned; // new world = full lives
     }
-    // Only reset lives if this is a brand new game (came from title/startGame)
-    // Don't reset if player died and visited lobby mid-run
+    // if !worldCleared: replay current world, keep remaining lives
     timeLeft=Math.min(500+world*15,700);camX=0;bossActive=false;
     inArena=false;arenaExitOpen=false;clearArrays();floodY=H+100;windForce=0;windTimer=200;
     checkpointX=0;checkpointReached=false;
     buildMap(world);buildEnemies(world);
-    const wb=P.big,ws=P.spinStored,wa=P.armyStored;resetP();applyUpg();P.big=P.big||wb;P.spinStored+=ws;P.armyStored+=wa;P.momentum=1;
+    const wb=P.big,ws=P.spinStored,wa=P.armyStored;resetP();applyUpg(true);P.big=P.big||wb;P.spinStored+=ws;P.armyStored+=wa;P.momentum=1;
     showIntro();
   });
 }
