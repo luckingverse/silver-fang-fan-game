@@ -458,13 +458,81 @@ function handleUIClick(gx,gy){
     if(lbNameInput.trim().length>0){
       playerName=lbNameInput.trim().slice(0,12);
       try{localStorage.setItem('ginga_name',playerName);}catch(e){}
-      state=firstLaunch?'howtoplay':'title';
+      state=firstLaunch?'howtoplay':'map';
+    }
+    return;
+  }
+
+  // World Map
+  if(state==='map'){
+    if(mapMenuOpen){
+      if(hitBtn('map_close',gx,gy)){mapMenuOpen=false;return;}
+      if(hitBtn('map_mute',gx,gy)){AU.toggleMute();return;}
+      if(hitBtn('map_title',gx,gy)){state='title';mapMenuOpen=false;return;}
+      if(hitBtn('map_enter',gx,gy)){startTransition(()=>startWorldFromMap(mapSelectedNode));mapMenuOpen=false;return;}
+      if(hitBtn('map_shop',gx,gy)){state='lobby';shopTab=0;shopCursor=0;skinShopCursor=0;mapMenuOpen=false;return;}
+      return;
+    }
+    // Node clicks
+    for(let i=0;i<10;i++){
+      if(hitBtn('map_node_'+i,gx,gy)){
+        const nodeWorld=i+1;
+        if(nodeWorld<=highestWorld){
+          mapSelectedNode=nodeWorld;
+          // Build waypoint queue: find Sol's current world position, walk through intermediate nodes
+          // Sol's current world = closest node to his current position, or village (world 0)
+          let solWorld=0; // 0 = village
+          let bestDist=Infinity;
+          for(let j=0;j<10;j++){
+            const nd2=MAP_NODES[j];
+            const d=Math.hypot(mapSolX-(nd2.x-12),mapSolY-(nd2.y-20));
+            if(d<bestDist){bestDist=d;solWorld=j+1;}
+          }
+          // Also check village distance
+          const vDist=Math.hypot(mapSolX-(MAP_VILLAGE_X()-10),mapSolY-(MAP_VILLAGE_Y()-20));
+          if(vDist<bestDist){solWorld=0;}
+          // Build queue of intermediate nodes to visit
+          mapSolQueue=[];
+          if(solWorld<nodeWorld){
+            // Walking up/forward through nodes
+            for(let j=solWorld+1;j<=nodeWorld;j++){
+              const nd2=MAP_NODES[j-1];
+              mapSolQueue.push({x:nd2.x-12,y:nd2.y-20});
+            }
+          } else if(solWorld>nodeWorld){
+            // Walking back down through nodes
+            for(let j=solWorld-1;j>=nodeWorld;j--){
+              if(j===0){mapSolQueue.push({x:MAP_VILLAGE_X()-10,y:MAP_VILLAGE_Y()-20});}
+              else{const nd2=MAP_NODES[j-1];mapSolQueue.push({x:nd2.x-12,y:nd2.y-20});}
+            }
+          } else {
+            // Same node — just walk there directly
+            const nd2=MAP_NODES[i];
+            mapSolQueue.push({x:nd2.x-12,y:nd2.y-20});
+          }
+          // Set first waypoint
+          if(mapSolQueue.length>0){
+            const wp=mapSolQueue.shift();
+            mapSolTargetX=wp.x;mapSolTargetY=wp.y;mapSolWalking=true;
+          }
+        }
+        return;
+      }
+    }
+    if(hitBtn('map_shop_btn',gx,gy)){state='lobby';shopTab=0;shopCursor=0;skinShopCursor=0;return;}
+    if(hitBtn('map_menu_btn',gx,gy)){mapMenuOpen=true;return;}
+    if(hitBtn('map_enter_btn',gx,gy)){startTransition(()=>startWorldFromMap(mapSelectedNode));return;}
+    // Click village — Sol walks back home
+    if(hitBtn('map_village',gx,gy)){
+      mapSolQueue=[{x:MAP_VILLAGE_X()-10,y:MAP_VILLAGE_Y()-20}];
+      const wp=mapSolQueue.shift();
+      mapSolTargetX=wp.x;mapSolTargetY=wp.y;mapSolWalking=true;
+      return;
     }
     return;
   }
 
   // How to play
-  if(state==='howtoplay'){state='title';return;}
 
   // Title screen
   if(state==='title'){
@@ -487,6 +555,8 @@ function handleUIClick(gx,gy){
     for(let t=0;t<4;t++){if(hitBtn('tab'+t,gx,gy)){shopTab=t;shopCursor=0;return;}}
     // Play / Continue buttons
     if(hitBtn('play',gx,gy)||hitBtn('cont',gx,gy)){continueFromShop();return;}
+    // Back to Map button
+    if(hitBtn('back_to_map',gx,gy)){backToMap();return;}
     // Upgrades tab
     if(shopTab===0){
       const tk=UKEYS.filter(k=>UPG[k].tier==='perm');
@@ -901,12 +971,12 @@ const THEMES=[
   {name:'Snow Peak',      kanji:'白銀の峰',   skyA:'#081428',skyB:'#182848',skyD:'#405868',groundT:'#A8C4DC',groundF:'#5878A0',accent:'#C0E0FF',  gimmick:'ice'},
   {name:'Dark Forest',    kanji:'闇の森',     skyA:'#020304',skyB:'#060810',skyD:'#020304',groundT:'#162410',groundF:'#0A1208',accent:'#80B040',  gimmick:'dark'},
   {name:'Volcanic Ridge', kanji:'火山の尾根', skyA:'#100408',skyB:'#280800',skyD:'#180400',groundT:'#342010',groundF:'#180808',accent:'#FF8040',  gimmick:'wind'},
-  {name:'Hokuzan Abyss',   kanji:'北山の深淵', skyA:'#000000',skyB:'#04000C',skyD:'#000000',groundT:'#100820',groundF:'#060010',accent:'#B060FF',  gimmick:'crumble'},
+  {name:'Hokuzan Abyss',  kanji:'北山の深淵', skyA:'#000000',skyB:'#04000C',skyD:'#000000',groundT:'#100820',groundF:'#060010',accent:'#B060FF',  gimmick:'crumble'},
   {name:'Storm Cliffs',   kanji:'嵐の崖',     skyA:'#060C18',skyB:'#0C1830',skyD:'#040810',groundT:'#304050',groundF:'#1A2830',accent:'#40A8FF',  gimmick:'flood'},
   {name:'Haunted Ruins',  kanji:'廃墟',       skyA:'#080808',skyB:'#101008',skyD:'#040404',groundT:'#282010',groundF:'#181208',accent:'#C0A840',  gimmick:'ghostworld'},
   {name:'Crystal Caverns',kanji:'水晶洞窟',   skyA:'#000814',skyB:'#001428',skyD:'#000408',groundT:'#101830',groundF:'#080C18',accent:'#00FFEE',  gimmick:'crystal'},
   {name:'Sky Peaks',      kanji:'天空の峰',   skyA:'#4090D0',skyB:'#60A8E0',skyD:'#2060A0',groundT:'#E8F4FF',groundF:'#C0D8F0',accent:'#FFFFFF',  gimmick:'thinair'},
-  {name:'Hokuzan Summit',     kanji:'北山の頂上', skyA:'#000000',skyB:'#080010',skyD:'#000000',groundT:'#201030',groundF:'#100818',accent:'#FF00FF',  gimmick:'all'},
+  {name:'Hokuzan Summit', kanji:'北山の頂上', skyA:'#000000',skyB:'#080010',skyD:'#000000',groundT:'#201030',groundF:'#100818',accent:'#FF00FF',  gimmick:'all'},
 ];
 function th(){return THEMES[Math.min(world-1,9)];}
 
@@ -939,6 +1009,13 @@ const firstLaunch=!localStorage.getItem('ginga_played');
 if(firstLaunch)try{localStorage.setItem('ginga_played','1');}catch(e){}
 let state='nameentry',score=0,lives=3,coins=0,timeLeft=500,world=1;
 let transitionAlpha=0,transitionDir=0,transitionCb=null; // fade transition system
+// ── WORLD MAP STATE ───────────────────────────────────
+let highestWorld=parseInt(localStorage.getItem('hk_hw_v2')||'1');
+let mapMenuOpen=false;
+let mapSelectedNode=highestWorld;
+let mapSolX=0,mapSolY=0,mapSolTargetX=0,mapSolTargetY=0,mapSolWalking=false,mapSolFacing=1,mapSolStep=0;
+let mapSolQueue=[]; // waypoint queue for path-following movement
+let mapFogAlpha=[]; for(let _i=0;_i<10;_i++) mapFogAlpha[_i]=_i<highestWorld?0:1;
 
 let frame=0,camX=0,screenShake=0,bossActive=false,worldCleared=false,timerID=null;
 let particles=[],floats=[],screenMsgs=[],items=[],bumpAnims=[],fireballs=[],rocks=[],allies=[];
@@ -970,21 +1047,21 @@ const LAYOUTS=[
  snows:[[3,0,10],[3,30,50],[3,75,95],[3,118,138],[3,158,178],[3,204,224],[3,248,268],[3,292,312],[3,320,330]],
  trees:[[20,3],[45,4],[72,3],[100,4],[132,3],[168,4],[210,3],[252,4],[294,3],[318,4]],
  boxes:[[8,5],[6,16],[4,26],[9,36],[7,46],[5,57],[8,66],[6,80],[4,93],[9,116],[7,132],[5,145],[8,158],[6,170],[4,184],[9,213],[7,228],[5,242],[8,258],[6,270],[4,284],[9,300],[7,314],[5,324]],
- spikes:[22,45,80,115,152,196,240,283],checkpoint:162},
+ spikes:[22,45,80,115,152,196,240,283],checkpoint:148},
 // W3 Dark Forest: bamboo maze
 {gaps:[[16,21],[40,46],[66,72],[96,102],[128,134],[162,168],[196,202],[230,236],[265,271],[300,306]],
  plats:[[12,2,5,'B'],[10,7,10,'B'],[8,12,15,'B'],[6,17,20,'B'],[11,22,27,'R'],[9,30,33,'B'],[7,35,38,'B'],[5,40,43,'B'],[10,47,51,'B'],[8,53,56,'B'],[6,58,61,'B'],[4,63,66,'B'],[11,73,78,'R'],[9,80,83,'B'],[7,85,88,'B'],[5,90,94,'B'],[12,103,107,'B'],[10,109,112,'B'],[8,114,117,'B'],[6,119,122,'B'],[11,129,134,'R'],[9,136,139,'B'],[7,141,144,'B'],[5,146,151,'B'],[12,155,159,'B'],[10,161,165,'B'],[8,169,174,'B'],[11,177,182,'R'],[9,184,187,'B'],[7,189,192,'B'],[5,194,196,'B'],[12,203,207,'B'],[10,209,212,'B'],[8,214,217,'B'],[6,219,222,'B'],[11,225,230,'R'],[9,237,240,'B'],[7,242,245,'B'],[5,247,250,'B'],[12,253,257,'B'],[10,259,262,'B'],[8,264,265,'B'],[11,272,277,'R'],[9,279,282,'B'],[7,284,287,'B'],[5,289,292,'B'],[12,295,299,'B'],[10,307,310,'B'],[8,312,315,'B'],[11,320,325,'R']],
  snows:[],
  trees:[[8,5],[22,6],[38,5],[56,6],[74,5],[94,6],[112,5],[130,6],[150,5],[170,6],[192,5],[212,6],[232,5],[255,6],[275,5],[297,6],[318,5]],
  boxes:[[10,3],[8,8],[6,13],[4,18],[9,24],[7,31],[5,36],[9,48],[7,54],[5,59],[3,64],[9,74],[7,81],[5,86],[3,91],[9,104],[7,110],[5,115],[9,130],[7,137],[5,142],[9,156],[7,162],[5,168],[9,178],[7,185],[5,190],[9,204],[7,210],[5,215],[9,226],[7,238],[5,243],[9,254],[7,260],[5,266],[9,273],[7,280],[5,285],[9,296],[7,308],[5,313],[9,321]],
- spikes:[18,30,44,68,98,130,164,198,232,266,302],checkpoint:162},
+ spikes:[18,30,44,68,98,130,164,198,232,266,302],checkpoint:148},
 // W4 Volcanic Ridge: long lava gaps
 {gaps:[[12,18],[34,42],[62,70],[92,101],[122,132],[155,165],[190,201],[228,240],[265,278],[305,318]],
  plats:[[11,2,6,'R'],[9,8,12,'R'],[7,14,17,'R'],[11,20,25,'R'],[9,27,31,'R'],[6,43,48,'R'],[11,50,55,'R'],[8,57,62,'R'],[11,72,77,'R'],[8,79,84,'R'],[6,86,91,'R'],[4,102,107,'R'],[7,110,115,'R'],[9,118,122,'R'],[4,134,139,'R'],[7,142,148,'R'],[9,152,155,'R'],[11,167,172,'R'],[8,175,180,'R'],[6,184,190,'R'],[4,203,208,'R'],[11,212,218,'R'],[8,222,228,'R'],[4,242,247,'R'],[11,250,256,'R'],[8,260,265,'R'],[4,280,285,'R'],[11,290,296,'R'],[8,300,305,'R'],[4,320,326,'R'],[11,327,329,'R']],
  snows:[],
  trees:[[20,3],[50,2],[80,3],[112,2],[148,3],[188,2],[228,3],[268,2],[308,3]],
  boxes:[[9,3],[7,9],[5,15],[9,22],[7,29],[9,44],[7,52],[5,58],[9,73],[7,80],[5,87],[3,103],[7,111],[9,119],[4,135],[7,143],[9,153],[9,168],[7,176],[5,185],[4,204],[9,213],[7,223],[4,243],[9,251],[7,261],[4,281],[9,291],[7,301],[4,321]],
- spikes:[10,26,44,64,94,125,158,195,232,268,308],checkpoint:162},
+ spikes:[10,26,44,64,94,125,158,195,232,268,308],checkpoint:148},
 // W5 Abyss: crumbling thin ledges
 {gaps:[[8,14],[22,29],[42,50],[64,73],[90,100],[118,129],[148,160],[180,193],[215,229],[253,268],[290,306]],
  plats:[[11,2,4,'R'],[9,5,7,'R'],[7,15,17,'R'],[11,18,20,'R'],[9,21,24,'R'],[7,30,32,'R'],[5,33,35,'R'],[11,36,40,'R'],[9,51,53,'R'],[7,54,57,'R'],[5,58,63,'R'],[11,74,76,'R'],[9,77,80,'R'],[7,81,89,'R'],[5,101,103,'R'],[11,104,107,'R'],[9,108,112,'R'],[7,113,117,'R'],[5,130,132,'R'],[11,133,136,'R'],[9,137,141,'R'],[7,142,147,'R'],[5,161,164,'R'],[11,165,168,'R'],[9,169,173,'R'],[7,174,179,'R'],[5,194,197,'R'],[11,198,201,'R'],[9,202,207,'R'],[7,208,214,'R'],[5,230,233,'R'],[11,234,237,'R'],[9,238,244,'R'],[7,245,252,'R'],[5,269,272,'R'],[11,273,276,'R'],[9,277,282,'R'],[7,283,289,'R'],[5,307,310,'R'],[11,311,314,'R'],[9,315,320,'R'],[7,321,328,'R']],
@@ -1004,7 +1081,7 @@ const LAYOUTS=[
  snows:[],
  trees:[[15,5],[42,6],[70,5],[100,6],[135,5],[168,6],[210,5],[250,6],[295,5]],
  boxes:[[9,5],[7,13],[5,22],[9,30],[7,41],[5,50],[9,61],[7,71],[5,81],[9,97],[7,108],[5,119],[9,135],[7,147],[5,157],[9,172],[7,183],[5,195],[9,213],[7,225],[5,237],[9,256],[7,268],[5,280],[9,300],[7,311],[5,327]],
- spikes:[18,35,58,90,130,168,210,250,290,320],checkpoint:162},
+ spikes:[18,35,58,90,130,168,210,250,290,320],checkpoint:148},
 // W8 Crystal Caverns: crystal world
 {gaps:[[14,20],[40,47],[72,80],[108,117],[148,158],[192,203],[238,250],[286,299],[320,327]],
  plats:[[11,2,8,'R'],[9,10,15,'R'],[7,18,24,'R'],[5,26,30,'R'],[11,32,39,'R'],[9,48,55,'R'],[7,57,64,'R'],[5,66,72,'R'],[11,81,88,'R'],[9,91,98,'R'],[7,102,108,'R'],[5,118,124,'R'],[11,127,136,'R'],[9,140,148,'R'],[7,159,166,'R'],[5,170,178,'R'],[11,182,192,'R'],[9,204,212,'R'],[7,218,228,'R'],[5,232,238,'R'],[11,251,260,'R'],[9,264,274,'R'],[7,278,286,'R'],[5,300,308,'R'],[11,312,320,'R'],[9,328,329,'R']],
@@ -1016,7 +1093,7 @@ const LAYOUTS=[
  plats:[[11,2,4,'R'],[9,5,7,'R'],[7,9,11,'R'],[11,18,21,'R'],[9,22,24,'R'],[7,26,29,'R'],[11,40,43,'R'],[9,44,46,'R'],[7,48,53,'R'],[11,65,68,'R'],[9,69,72,'R'],[7,74,81,'R'],[11,94,97,'R'],[9,98,102,'R'],[7,104,115,'R'],[11,129,132,'R'],[9,133,138,'R'],[7,140,153,'R'],[11,168,171,'R'],[9,172,177,'R'],[7,179,195,'R'],[11,211,214,'R'],[9,215,221,'R'],[7,223,239,'R'],[11,256,259,'R'],[9,260,266,'R'],[7,268,279,'R'],[11,297,300,'R'],[9,301,307,'R'],[7,309,315,'R'],[5,326,329,'R']],
  snows:[],trees:[],
  boxes:[[9,2],[7,6],[9,19],[7,23],[9,41],[7,45],[9,66],[7,70],[9,95],[7,99],[9,130],[7,134],[9,169],[7,173],[9,212],[7,216],[9,257],[7,261],[9,298],[7,302],[9,320]],
- spikes:[8,20,34,55,84,118,158,198,242,284,318],checkpoint:165},
+ spikes:[8,20,34,55,84,118,158,198,242,284,318],checkpoint:145},
 // W10 Hokuzan Summit: all hazards
 {gaps:[[8,15],[24,33],[48,58],[76,87],[108,120],[144,157],[184,198],[228,243],[268,284],[308,322]],
  plats:[[11,2,4,'R'],[9,5,7,'R'],[7,16,19,'R'],[11,20,23,'R'],[9,34,37,'R'],[7,38,47,'R'],[11,59,62,'R'],[9,63,75,'R'],[7,88,92,'R'],[11,93,107,'R'],[9,121,126,'R'],[7,128,143,'R'],[11,158,163,'R'],[9,166,183,'R'],[7,199,204,'R'],[11,207,227,'R'],[9,244,249,'R'],[7,252,267,'R'],[11,285,290,'R'],[9,293,307,'R'],[7,323,328,'R']],
@@ -1514,7 +1591,7 @@ function exitBossTower(){
     floodY=H+100;
     windForce=0;
     clearArrays();
-    goLobby(1);
+    goMap();
   });
 }
 
@@ -1596,6 +1673,7 @@ function bossHurt(){
 function bossDie(){
   boss.alive=false;
   worldCleared=true; // B271: gate continueFromShop
+  if(world>=highestWorld){highestWorld=Math.min(world+1,10);try{localStorage.setItem('hk_hw_v2',highestWorld);}catch(e){}mapFogAlpha[world-1]=0;}
   if(bossType==='wolf'){for(const w of wolfPack)w.alive=false;}
   const pts=10000+world*3000;score+=pts;checkSkinUnlocks();
   clearInterval(timerID);screenShake=50;
@@ -1612,7 +1690,7 @@ function bossDie(){
     try{if(navigator.share)setTimeout(()=>navigator.share({title:'HOKKYOKU: Sol Fang',text:`I defeated ${nm} in World ${world}! Score: ${score} 🐺⚔️`,url:location.href}).catch(()=>{}),3200);}catch(e){}
     setTimeout(()=>{
       if(inArena){arenaExitOpen=true;addMsg('EXIT PORTAL OPEN — walk to the right!','#00FF80');}
-      else{goLobby(1);}
+      else{goMap();}
     },2800);
   }
 }
@@ -1826,15 +1904,15 @@ function updateBoss(){
   if(boss.x+boss.w>bossMaxX)boss.vx=boss.rage?-(boss.rageSpeed||(1.5+world*.3)*1.6):-(Math.abs(boss.vx)||(1.5+world*.3));
   const rage=boss.rage;
   // Only W3/W7/W9 bears jump — hop toward player height, short controlled arc
-  const bossJumps=bossType==='bear'&&(world===3||world===7||world===9);
+  const bossJumps=bossType==='bear'&&(world===6||world===9);
   if(bossJumps){
     boss.jumpT--;
     if(!boss.jumpT&&boss.ground){
-      const jumpPow=world===7?(rage?8:6):(rage?10:8); // Shirokage ghost floats light
+      const jumpPow=world===9?(rage?8:6):(rage?10:8); // Shirokage ghost floats light at W9
       boss.vy=-jumpPow;
       boss.vx=(P.x>boss.x+boss.w/2?1:-1)*(boss.rage?(boss.rageSpeed||(1.5+world*.3)*1.6):Math.abs(boss.vx||(1.5+world*.3)))*(rage?1:1);
       boss.jumpT=rage?55:Math.max(70,130-world*8);
-      screenShake=world===7?4:7;
+      screenShake=world===9?4:7;
     }
   }
   boss.roarT--;if(!boss.roarT){
@@ -2049,7 +2127,19 @@ function goLobby(tab=1){coinBank+=coins;coins=0;state='lobby';shopCursor=0;shopT
 }
 // Keep goShop as alias for compatibility
 function goShop(){goLobby(1);}
-function openLobbyFromTitle(){state='lobby';shopTab=2;shopCursor=0;skinShopCursor=0;AU.bgmStop();}
+function goMap(){
+  coinBank+=coins;coins=0;
+  clearInterval(timerID);AU.bgmStop();inArena=false;arenaExitOpen=false;
+  mapMenuOpen=false;
+  mapSelectedNode=Math.min(world,highestWorld);
+  // Sol spawns at the world node he just came from (not village)
+  const spawnNode=MAP_NODES[Math.min(world-1,9)];
+  mapSolX=spawnNode.x-11;mapSolY=spawnNode.y-20;
+  mapSolTargetX=mapSolX;mapSolTargetY=mapSolY;mapSolWalking=false;mapSolFacing=1;
+  state='map';
+  try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+}
+function openLobbyFromTitle(){goMap();}
 function continueFromShop(){
   startTransition(()=>{
     if(worldCleared){
@@ -2065,6 +2155,23 @@ function continueFromShop(){
     const wb=P.big,ws=P.spinStored,wa=P.armyStored;resetP();applyUpg(true);P.big=P.big||wb;P.spinStored+=ws;P.armyStored+=wa;P.momentum=1;
     showIntro();
   });
+}
+function backToMap(){
+  state='map';mapMenuOpen=false;
+  // Sol spawns at the node for the world he was just playing
+  const spawnNode=MAP_NODES[Math.min(world-1,9)];
+  mapSolX=spawnNode.x-11;mapSolY=spawnNode.y-20;
+  mapSolTargetX=mapSolX;mapSolTargetY=mapSolY;mapSolWalking=false;mapSolFacing=1;
+}
+function startWorldFromMap(w){
+  // Enter a specific world from the map
+  world=w;worldCleared=false;
+  timeLeft=Math.min(500+world*15,700);camX=0;bossActive=false;
+  inArena=false;arenaExitOpen=false;clearArrays();floodY=H+100;windForce=0;windTimer=200;
+  comboCount=0;comboTimer=0;checkpointX=0;checkpointReached=false;
+  buildMap(world);buildEnemies(world);
+  const wb=P.big,ws=P.spinStored,wa=P.armyStored;resetP();applyUpg(true);P.big=P.big||wb;P.spinStored+=ws;P.armyStored+=wa;P.momentum=1;
+  showIntro();
 }
 
 // ── PAUSE ─────────────────────────────────────────────
@@ -2085,16 +2192,18 @@ function update(){
     if(transitionDir>0&&transitionAlpha>=1){transitionAlpha=1;transitionDir=0;if(transitionCb){const cb=transitionCb;transitionCb=null;cb();}}
     if(transitionDir<0&&transitionAlpha<=0){transitionAlpha=0;transitionDir=0;}
   }
-  // M — mute/unmute
-  if(just['KeyM']){AU.toggleMute();clrJ();}
-  // P / Escape — pause (not during leaderboard name entry)
-  if((just['KeyP']||just['Escape'])&&state==='playing'){togglePause();clrJ();}
-  // L while paused — exit to lobby
+  // M — open map menu (on map screen) or toggle menu (on playing)
+  if(just['KeyM']){
+    if(state==='map'){mapMenuOpen=!mapMenuOpen;clrJ();}
+    else if(state==='playing'){togglePause();clrJ();}
+    else{clrJ();}
+  }
+  // L while paused — exit to map
   if(paused&&just['KeyL']){
     paused=false;clearInterval(timerID);AU.bgmStop();
     coinBank+=coins;coins=0;
     try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
-    state='lobby';shopTab=0;shopCursor=0;skinShopCursor=0;clrJ();return;
+    goMap();clrJ();return;
   }
   if(paused){clrJ();return;}
   // NAME ENTRY (first screen)
@@ -2104,7 +2213,7 @@ function update(){
       if(lbNameInput.trim().length>0){
         playerName=lbNameInput.trim().slice(0,12);
         try{localStorage.setItem('ginga_name',playerName);}catch(e){}
-        state=firstLaunch?'howtoplay':'title';
+        state=firstLaunch?'howtoplay':'map';
       }
     }
     if(just['Backspace'])lbNameInput=lbNameInput.slice(0,-1);
@@ -2129,6 +2238,49 @@ function update(){
     clrJ();return;
   }
   if(state==='intro'){frame++;introTimer--;introPct=Math.min(1,(180-introTimer)/180);if(introTimer<=0)skipIntro();if(just['Space']||just['KeyZ']||just['KeyX'])skipIntro();clrJ();return;}
+  // ── WORLD MAP UPDATE ──────────────────────────────────
+  if(state==='map'){
+    frame++;mapSolStep++;
+    // Walk Sol toward current target waypoint
+    if(mapSolWalking){
+      const dx=mapSolTargetX-mapSolX,dy=mapSolTargetY-mapSolY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<4){
+        mapSolX=mapSolTargetX;mapSolY=mapSolTargetY;
+        // Advance to next waypoint in queue, or stop
+        if(mapSolQueue.length>0){
+          const wp=mapSolQueue.shift();
+          mapSolTargetX=wp.x;mapSolTargetY=wp.y;
+        } else {mapSolWalking=false;}
+      } else {
+        const spd=Math.min(2.5,dist*.15+1);
+        mapSolFacing=dx>0?1:-1;
+        mapSolX+=dx/dist*spd;mapSolY+=dy/dist*spd;
+      }
+    }
+    // Keyboard node navigation — also uses queue
+    if(!mapMenuOpen){
+      if(just['ArrowUp']||just['KeyW']){
+        const n=Math.min(mapSelectedNode+1,highestWorld);
+        if(n!==mapSelectedNode){
+          mapSelectedNode=n;const nd=MAP_NODES[n-1];
+          mapSolQueue=[{x:nd.x-12,y:nd.y-20}]; // one step at a time with keyboard
+          const wp=mapSolQueue.shift();mapSolTargetX=wp.x;mapSolTargetY=wp.y;mapSolWalking=true;
+        }
+      }
+      if(just['ArrowDown']||just['KeyS']){
+        const n=Math.max(mapSelectedNode-1,1);
+        if(n!==mapSelectedNode){
+          mapSelectedNode=n;const nd=MAP_NODES[n-1];
+          mapSolQueue=[{x:nd.x-12,y:nd.y-20}];
+          const wp=mapSolQueue.shift();mapSolTargetX=wp.x;mapSolTargetY=wp.y;mapSolWalking=true;
+        }
+      }
+      if(just['Enter']||just['Space']||just['KeyZ']){startTransition(()=>startWorldFromMap(mapSelectedNode));}
+    }
+    if(just['Escape'])mapMenuOpen=false;
+    clrJ();return;
+  }
   if(state==='lobby'){
     frame++;
     if(just['Escape']||just['Enter']){continueFromShop();clrJ();return;}
@@ -2949,8 +3101,10 @@ function drawGin(){
 
   // ── BODY ──
   const bodyW=bw-4,bodyH=bh*.55;
+  ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=6;ctx.shadowOffsetX=1;ctx.shadowOffsetY=2;
   ctx.fillStyle=bc;
   ctx.beginPath();ctx.roundRect(px+2,by+bh*.28,bodyW,bodyH,4);ctx.fill();
+  ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
   // Saddle marking (darker patch on back/top of body — Gin's distinctive look)
   ctx.fillStyle=markCol;
   ctx.beginPath();ctx.roundRect(px+2,by+bh*.28,bodyW,bodyH*.35,4);ctx.fill();
@@ -3610,7 +3764,7 @@ function drawHUD(){
     ctx.fillText(momPct>0.95?'MAX SPEED!':momPct>0.5?'RUNNING':'',W-14,H-17);
   }
   ctx.font='10px monospace';ctx.textAlign='left';
-  ctx.fillText(AU.muted?'🔇 M=unmute':'🔊 M=mute',12,H-8);
+  ctx.fillText(AU.muted?'🔇 MUTED':'🔊',12,H-8);
   // Gimmick indicator
   const gNames={ice:'❄ ICY GROUND',wind:'💨 WIND GUSTS',dark:'👁 DARKNESS',crumble:'💥 CRUMBLING',flood:'🌊 RISING FLOOD',ghostworld:'👻 GHOST ENEMIES',crystal:'💎 CRYSTALS',thinair:'🌤 THIN AIR',all:'⚡ ALL HAZARDS',
     icy:'❄ ICY GROUND',lava:'🌋 RISING LAVA',ghostplats:'👻 GHOST PLATFORMS'};
@@ -3821,7 +3975,685 @@ function uiBtn(id,x,y,w,h,label,opts={}){
 function hitBtn(id,gx,gy){const b=lobbyBtns[id];return b&&gx>=b.x&&gx<=b.x+b.w&&gy>=b.y&&gy<=b.y+b.h;}
 function anyHitBtn(gx,gy){return Object.keys(lobbyBtns).find(id=>hitBtn(id,gx,gy));}
 
-// ── LOBBY ─────────────────────────────────────────────
+
+
+
+// ── WORLD MAP ─────────────────────────────────────────
+// The ENTIRE canvas is one continuous painted landscape.
+// Forest left/low → dark forest → ice mid-slope → wind canyon →
+// ghost shrine mist → crumbling ruins → crystal cave glow →
+// volcanic heat → haunted summit → storm peak upper-right.
+// All zones bleed into each other. No panels. No boxes.
+// Nodes = tiny glowing dots sitting on a dirt path.
+
+const MAP_VILLAGE_X=()=>Math.round(W*.09);
+const MAP_VILLAGE_Y=()=>Math.round(H*.82);
+
+// Node positions — small points on the path through the terrain
+// Following the red-line sketch: W2 dips low, W4 dips low-right,
+// S-curve snakes broadly up to summit upper-right
+const MAP_NODES=(function(){
+  const pct=[
+    [22, 74],  // W1  Futago Pass — forest foothills
+    [38, 88],  // W2  Snow Peak — dips low into valley
+    [48, 64],  // W3  Dark Forest — climbs back up
+    [62, 78],  // W4  Volcanic Ridge — dips down-right
+    [44, 50],  // W5  Hokuzan Abyss — sweeps left-up
+    [66, 50],  // W6  Storm Cliffs — right mid
+    [74, 72],  // W7  Haunted Ruins — dips down-right
+    [85, 55],  // W8  Crystal Caverns — far right mid
+    [70, 28],  // W9  Sky Peaks — upper center
+    [82, 14],  // W10 Hokuzan Summit — upper right, on the peak
+  ];
+  return pct.map(([px,py],i)=>({x:Math.round(W*px/100),y:Math.round(H*py/100),world:i+1}));
+})();
+
+// Pine silhouette — the whole map uses these for forest texture
+function mPine(px,py,h,r,g,b,a){
+  ctx.fillStyle=`rgba(${r},${g},${b},${a})`;
+  ctx.beginPath();ctx.moveTo(px,py-h);ctx.lineTo(px-h*.52,py);ctx.lineTo(px+h*.52,py);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(px,py-h*.56);ctx.lineTo(px-h*.36,py-h*.22);ctx.lineTo(px+h*.36,py-h*.22);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(px,py-h*.32);ctx.lineTo(px-h*.22,py-h*.27);ctx.lineTo(px+h*.22,py-h*.27);ctx.closePath();ctx.fill();
+}
+
+// Rounded rock blob
+function mRock(cx,cy,w,h,col){
+  ctx.fillStyle=col;
+  ctx.beginPath();ctx.ellipse(cx,cy,w,h,0,0,Math.PI*2);ctx.fill();
+}
+
+// Organic path segment
+function drawMapPath(x1,y1,x2,y2,cleared){
+  const dx=x2-x1,dy=y2-y1;
+  const cx=((x1+x2)/2)+(dy*.16);
+  const cy=((y1+y2)/2)-(Math.abs(dx)*.04);
+  ctx.save();
+  if(cleared){
+    ctx.strokeStyle='rgba(48,34,12,.80)';ctx.lineWidth=6;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+    ctx.strokeStyle='rgba(85,62,22,.58)';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+    ctx.strokeStyle='rgba(175,128,35,.18)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+  } else {
+    ctx.strokeStyle='rgba(55,65,40,.25)';ctx.lineWidth=3;ctx.setLineDash([4,10]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+function drawWorldMap(){
+  lobbyBtns={};
+  const VX=MAP_VILLAGE_X(), VY=MAP_VILLAGE_Y();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 1 — SKY (60% dark blue-black)
+  // ════════════════════════════════════════════════════
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#010209');sky.addColorStop(.35,'#020A12');
+  sky.addColorStop(.70,'#040E08');sky.addColorStop(1,'#080F06');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Stars
+  ctx.save();
+  for(let i=0;i<185;i++){
+    const sx=(i*109.7+17)%W,sy=(i*77.3)%(H*.50);
+    ctx.globalAlpha=.06+Math.sin(frame*.022+i*.83)*.09;
+    ctx.fillStyle=i%16===0?'#FFD060':i%8===0?'#FFA030':'#A8C0F0';
+    ctx.fillRect(sx,sy,i%22===0?1.6:.7,i%22===0?1.6:.7);
+  }
+  ctx.globalAlpha=1;ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 2 — MOON (upper-left, harvest amber — between
+  //            pure white and blood red)
+  // ════════════════════════════════════════════════════
+  const MX=W*.13,MY=H*.16,MR=46;
+  ctx.save();
+  // Warm amber-gold outer halo
+  const mh=ctx.createRadialGradient(MX,MY,MR*.5,MX,MY,MR*5);
+  mh.addColorStop(0,'rgba(160,90,20,.14)');mh.addColorStop(.5,'rgba(110,55,10,.06)');mh.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=mh;ctx.beginPath();ctx.arc(MX,MY,MR*5,0,Math.PI*2);ctx.fill();
+  // Moon disc — warm harvest gold, not red
+  const md=ctx.createRadialGradient(MX-MR*.28,MY-MR*.28,3,MX,MY,MR);
+  md.addColorStop(0,'#F0E0C8');md.addColorStop(.45,'#D4A870');
+  md.addColorStop(.78,'#A87040');md.addColorStop(1,'#7A4820');
+  ctx.fillStyle=md;ctx.beginPath();ctx.arc(MX,MY,MR,0,Math.PI*2);ctx.fill();
+  // Soft dark rim
+  const mr=ctx.createRadialGradient(MX,MY,MR*.72,MX,MY,MR*1.12);
+  mr.addColorStop(0,'rgba(0,0,0,0)');mr.addColorStop(1,'rgba(40,12,2,.38)');
+  ctx.fillStyle=mr;ctx.beginPath();ctx.arc(MX,MY,MR*1.12,0,Math.PI*2);ctx.fill();
+  // Craters — warm shadow
+  ctx.fillStyle='rgba(50,22,5,.22)';
+  ctx.beginPath();ctx.arc(MX-11,MY+9,6.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(MX+14,MY-11,4.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(MX+4,MY+16,3.5,0,Math.PI*2);ctx.fill();
+  // Drifting cloud
+  const cd=Math.sin(frame*.005)*13;
+  ctx.fillStyle='rgba(12,18,36,.72)';
+  ctx.beginPath();ctx.ellipse(MX+cd-13,MY-7,38,13,-.13,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(MX+cd+11,MY+5,24,10,.10,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 3 — MOUNTAIN BODY (30% terrain)
+  // ════════════════════════════════════════════════════
+  // Far background ridge
+  ctx.save();
+  ctx.fillStyle='rgba(7,12,22,.96)';
+  ctx.beginPath();ctx.moveTo(0,H);
+  ctx.lineTo(W*.06,H*.55);ctx.lineTo(W*.14,H*.67);ctx.lineTo(W*.22,H*.46);
+  ctx.lineTo(W*.30,H*.59);ctx.lineTo(W*.38,H*.36);ctx.lineTo(W*.47,H*.52);
+  ctx.lineTo(W*.55,H*.26);ctx.lineTo(W*.63,H*.44);ctx.lineTo(W*.70,H*.12);
+  ctx.lineTo(W*.78,H*.28);ctx.lineTo(W*.84,H*.14);ctx.lineTo(W*.91,H*.30);
+  ctx.lineTo(W*.96,H*.18);ctx.lineTo(W,H*.34);ctx.lineTo(W,H);
+  ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // Main mountain — continuous slope, right-leaning
+  ctx.save();
+  ctx.fillStyle='#0A1407';
+  ctx.beginPath();ctx.moveTo(W*.06,H);
+  ctx.lineTo(W*.16,H*.76);ctx.lineTo(W*.26,H*.62);ctx.lineTo(W*.36,H*.48);
+  ctx.lineTo(W*.48,H*.32);ctx.lineTo(W*.58,H*.20);ctx.lineTo(W*.70,H*.06);
+  ctx.lineTo(W*.76,H*.16);ctx.lineTo(W*.82,H*.28);ctx.lineTo(W*.88,H*.40);
+  ctx.lineTo(W*.93,H*.52);ctx.lineTo(W*.97,H*.62);ctx.lineTo(W,H*.68);
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+  // Front slope — slightly lighter, the walkable face
+  ctx.fillStyle='#0D1A09';
+  ctx.beginPath();ctx.moveTo(0,H);
+  ctx.lineTo(W*.04,H*.93);ctx.lineTo(W*.10,H*.85);ctx.lineTo(W*.18,H*.77);
+  ctx.lineTo(W*.28,H*.65);ctx.lineTo(W*.40,H*.52);ctx.lineTo(W*.52,H*.38);
+  ctx.lineTo(W*.62,H*.24);ctx.lineTo(W*.70,H*.10);ctx.lineTo(W*.74,H*.06);
+  ctx.lineTo(W*.78,H*.16);ctx.lineTo(W*.84,H*.28);ctx.lineTo(W*.90,H*.42);
+  ctx.lineTo(W*.95,H*.56);ctx.lineTo(W*.98,H*.64);ctx.lineTo(W,H*.68);
+  ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 4 — CONTINUOUS BIOME TERRAIN PAINT
+  // Each zone flows into the next — no borders anywhere
+  // ════════════════════════════════════════════════════
+
+  // ── W1-W2 ZONE: Deep forest floor ──────────────────
+  // Ground undergrowth — the whole lower-left is forest
+  ctx.save();
+  const fz=ctx.createLinearGradient(0,H*.55,W*.65,H*.95);
+  fz.addColorStop(0,'rgba(6,18,4,.0)');fz.addColorStop(.3,'rgba(5,14,3,.55)');fz.addColorStop(1,'rgba(3,9,2,.82)');
+  ctx.fillStyle=fz;ctx.fillRect(0,H*.50,W*.70,H*.55);
+
+  // W1 forest — bright green pines, lower-left
+  for(let i=0;i<30;i++){
+    const px=W*(.005+i*.032),py=H*(.80+Math.sin(i*2.1)*.024);
+    const ph=H*(.058+Math.sin(i*1.8)*.018);
+    const dark=Math.min(.85,i/18);
+    const g=Math.floor(55-dark*22);
+    mPine(px,py,ph,8+dark*4|0,38+g|0,5+dark*3|0,.86);
+  }
+  // Back row
+  for(let i=0;i<20;i++){
+    const px=W*(.01+i*.046),py=H*(.76+Math.sin(i*2.8)*.020);
+    const ph=H*(.042+Math.sin(i*2.2)*.012);
+    mPine(px,py,ph,6,28,4,.70);
+  }
+  ctx.restore();
+
+  // W2 SNOW PEAK — centre-bottom valley, cold blue-white ice and snow
+  ctx.save();
+  const szW2=ctx.createRadialGradient(W*.38,H*.88,20,W*.38,H*.88,W*.20);
+  szW2.addColorStop(0,'rgba(60,90,130,.45)');szW2.addColorStop(.6,'rgba(40,65,100,.22)');szW2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=szW2;ctx.beginPath();ctx.arc(W*.38,H*.88,W*.20,0,Math.PI*2);ctx.fill();
+  // Snow ground coat
+  ctx.fillStyle='rgba(180,210,240,.14)';
+  ctx.beginPath();ctx.ellipse(W*.38,H*.90,W*.16,H*.04,0,0,Math.PI*2);ctx.fill();
+  // Snow-capped pine trees
+  for(let i=0;i<14;i++){
+    const px=W*(.26+i*.040),py=H*(.86+Math.sin(i*3.1)*.022);
+    const ph=H*(.050+Math.sin(i*1.5)*.013);
+    mPine(px,py,ph,12,22,35,.75);
+    // Snow cap on each pine
+    ctx.fillStyle='rgba(210,230,248,.55)';
+    ctx.beginPath();ctx.ellipse(px,py-ph,ph*.32,ph*.12,0,0,Math.PI*2);ctx.fill();
+  }
+  // Icicle accents on terrain
+  ctx.strokeStyle='rgba(160,200,240,.32)';ctx.lineWidth=1;
+  for(let i=0;i<6;i++){
+    const ix=W*(.30+i*.03),iy=H*.84;
+    ctx.beginPath();ctx.moveTo(ix,iy);ctx.lineTo(ix,iy+H*.018);ctx.stroke();
+  }
+  ctx.restore();
+
+  // W3 DARK FOREST — centre mid-slope, oppressive twisted trees
+  ctx.save();
+  const dzW3=ctx.createRadialGradient(W*.48,H*.64,15,W*.48,H*.64,W*.18);
+  dzW3.addColorStop(0,'rgba(2,6,2,.72)');dzW3.addColorStop(.5,'rgba(2,4,1,.38)');dzW3.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=dzW3;ctx.beginPath();ctx.arc(W*.48,H*.64,W*.18,0,Math.PI*2);ctx.fill();
+  // Dark twisted tree silhouettes
+  ctx.strokeStyle='rgba(5,10,3,.80)';ctx.lineWidth=2;ctx.lineCap='round';
+  const dtrees3=[[W*.40,H*.68],[W*.45,H*.70],[W*.50,H*.66],[W*.55,H*.69],[W*.58,H*.67]];
+  dtrees3.forEach(([tx,ty],ti)=>{
+    ctx.beginPath();ctx.moveTo(tx,ty);
+    ctx.bezierCurveTo(tx+Math.sin(ti)*8,ty-16,tx-Math.sin(ti)*5,ty-30,tx+Math.cos(ti)*12,ty-44);
+    ctx.stroke();
+    ctx.beginPath();ctx.moveTo(tx+Math.cos(ti)*6,ty-26);ctx.lineTo(tx-12+ti*2,ty-35);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(tx+Math.cos(ti)*9,ty-34);ctx.lineTo(tx+16-ti,ty-40);ctx.stroke();
+  });
+  for(let i=0;i<10;i++){
+    const px=W*(.38+i*.036),py=H*(.68+Math.sin(i*3.1)*.018);
+    const ph=H*(.040+Math.sin(i*1.5)*.010);
+    mPine(px,py,ph,3,9,2,.78);
+  }
+  ctx.restore();
+
+  // W4 VOLCANIC RIDGE — lower-right, red-brown rock earth
+  ctx.save();
+  const wzW4=ctx.createRadialGradient(W*.62,H*.78,12,W*.62,H*.78,W*.16);
+  wzW4.addColorStop(0,'rgba(55,20,6,.55)');wzW4.addColorStop(.55,'rgba(38,13,3,.28)');wzW4.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=wzW4;ctx.beginPath();ctx.arc(W*.62,H*.78,W*.16,0,Math.PI*2);ctx.fill();
+  mRock(W*.56,H*.81,W*.038,H*.025,'rgba(42,18,6,.62)');
+  mRock(W*.66,H*.80,W*.028,H*.018,'rgba(36,14,4,.58)');
+  mRock(W*.60,H*.85,W*.022,H*.015,'rgba(30,12,3,.52)');
+  ctx.restore();
+
+  // W5 HOKUZAN ABYSS — left upper-mid, deep purple void crumble
+  ctx.save();
+  const azW5=ctx.createRadialGradient(W*.44,H*.50,10,W*.44,H*.50,W*.17);
+  azW5.addColorStop(0,'rgba(20,8,30,.65)');azW5.addColorStop(.5,'rgba(12,4,18,.32)');azW5.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=azW5;ctx.beginPath();ctx.arc(W*.44,H*.50,W*.17,0,Math.PI*2);ctx.fill();
+  // Crumbling wall fragments
+  ctx.fillStyle='rgba(22,10,32,.70)';
+  ctx.fillRect(W*.38,H*.46,W*.020,H*.09);
+  ctx.fillRect(W*.39,H*.40,W*.012,H*.04);
+  ctx.fillRect(W*.48,H*.47,W*.018,H*.08);
+  ctx.fillRect(W*.49,H*.42,W*.010,H*.03);
+  // Purple energy crack
+  ctx.strokeStyle='rgba(110,30,200,.30)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W*.41,H*.44);ctx.lineTo(W*.45,H*.56);ctx.stroke();
+  ctx.restore();
+
+  // W6 STORM CLIFFS — right mid, steel blue flood/storm atmosphere
+  ctx.save();
+  const stW6=ctx.createRadialGradient(W*.66,H*.50,10,W*.66,H*.50,W*.14);
+  stW6.addColorStop(0,'rgba(18,30,52,.62)');stW6.addColorStop(.5,'rgba(10,18,34,.30)');stW6.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=stW6;ctx.beginPath();ctx.arc(W*.66,H*.50,W*.14,0,Math.PI*2);ctx.fill();
+  // Rain streak suggestions
+  ctx.strokeStyle='rgba(100,150,210,.20)';ctx.lineWidth=1;
+  for(let ri=0;ri<8;ri++){
+    const rx=W*(.60+ri*.012),ry=H*(.44+ri*.008);
+    ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx+3,ry+12);ctx.stroke();
+  }
+  // Rocky cliff silhouettes
+  ctx.fillStyle='rgba(20,28,42,.60)';
+  ctx.beginPath();ctx.moveTo(W*.62,H*.56);ctx.lineTo(W*.63,H*.44);ctx.lineTo(W*.67,H*.42);ctx.lineTo(W*.70,H*.56);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // W7 HAUNTED RUINS — lower-right dip, amber death-glow and broken stones
+  ctx.save();
+  const hrW7=ctx.createRadialGradient(W*.74,H*.72,10,W*.74,H*.72,W*.16);
+  hrW7.addColorStop(0,'rgba(35,24,5,.58)');hrW7.addColorStop(.5,'rgba(22,15,3,.28)');hrW7.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=hrW7;ctx.beginPath();ctx.arc(W*.74,H*.72,W*.16,0,Math.PI*2);ctx.fill();
+  // Broken wall/ruin silhouettes
+  ctx.fillStyle='rgba(28,18,5,.70)';
+  ctx.fillRect(W*.69,H*.68,W*.018,H*.08);
+  ctx.fillRect(W*.70,H*.63,W*.010,H*.04);
+  ctx.fillRect(W*.78,H*.69,W*.016,H*.07);
+  // Amber ghost-light flicker
+  ctx.globalAlpha=.18+Math.sin(frame*.12)*.10;
+  ctx.fillStyle='#C09020';
+  ctx.beginPath();ctx.arc(W*.74,H*.70,W*.028,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.restore();
+
+  // W8 CRYSTAL CAVERNS — far right mid, teal crystal glow in rock
+  ctx.save();
+  const czW8=ctx.createRadialGradient(W*.85,H*.55,5,W*.85,H*.58,W*.12);
+  czW8.addColorStop(0,'rgba(0,80,72,.52)');czW8.addColorStop(.5,'rgba(0,50,46,.24)');czW8.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=czW8;ctx.beginPath();ctx.arc(W*.85,H*.56,W*.12,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=.62;
+  const cspires=[[W*.81,H*.60],[W*.84,H*.58],[W*.87,H*.61],[W*.90,H*.59]];
+  cspires.forEach(([sx,sy],si)=>{
+    ctx.fillStyle=`rgba(0,${185+si*12},${168+si*10},.65)`;
+    ctx.beginPath();ctx.moveTo(sx-4,sy);ctx.lineTo(sx+4,sy);ctx.lineTo(sx,sy-H*.042-si*2);ctx.closePath();ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  ctx.restore();
+
+  // W9 SKY PEAKS — upper-center, bright white-blue open sky
+  ctx.save();
+  const spW9=ctx.createRadialGradient(W*.70,H*.28,8,W*.70,H*.28,W*.14);
+  spW9.addColorStop(0,'rgba(100,160,220,.35)');spW9.addColorStop(.5,'rgba(70,120,180,.15)');spW9.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=spW9;ctx.beginPath();ctx.arc(W*.70,H*.28,W*.14,0,Math.PI*2);ctx.fill();
+  // Wispy cloud streaks at this altitude
+  ctx.fillStyle='rgba(200,220,245,.18)';
+  ctx.beginPath();ctx.ellipse(W*.68,H*.24,W*.055,H*.016,-.08,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(W*.73,H*.26,W*.040,H*.012,.05,0,Math.PI*2);ctx.fill();
+  // Rocky peak outlines at sky line
+  ctx.fillStyle='rgba(180,200,230,.22)';
+  ctx.beginPath();ctx.moveTo(W*.65,H*.32);ctx.lineTo(W*.68,H*.20);ctx.lineTo(W*.72,H*.28);ctx.lineTo(W*.75,H*.18);ctx.lineTo(W*.78,H*.30);ctx.closePath();ctx.fill();
+  ctx.restore();
+
+  // W10 SUMMIT — upper-right, void dark, storm above
+  ctx.save();
+  // Storm cloud cover near summit
+  const szW10=ctx.createRadialGradient(W*.82,H*.08,5,W*.82,H*.08,W*.15);
+  szW10.addColorStop(0,'rgba(22,4,32,.65)');szW10.addColorStop(.5,'rgba(14,2,20,.35)');szW10.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=szW10;ctx.beginPath();ctx.arc(W*.82,H*.08,W*.15,0,Math.PI*2);ctx.fill();
+  // Snow / frost on peak tip
+  ctx.fillStyle='rgba(180,205,230,.14)';
+  ctx.beginPath();ctx.ellipse(W*.745,H*.07,W*.042,H*.022,-.08,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ── Mid-mountain transition pines (W3-W5 zone) ──────
+  ctx.save();
+  for(let i=0;i<12;i++){
+    const px=W*(.22+i*.048),py=H*(.60+Math.sin(i*2.6)*.020);
+    const ph=H*(.034+Math.sin(i*2.1)*.010);
+    mPine(px,py,ph,6,22,4,.68);
+  }
+  ctx.restore();
+
+  // ── Atmospheric ground fog — low in the valleys ─────
+  ctx.save();
+  const gf=ctx.createLinearGradient(0,H*.78,0,H);
+  gf.addColorStop(0,'rgba(0,0,0,0)');gf.addColorStop(.65,'rgba(5,9,3,.12)');gf.addColorStop(1,'rgba(3,6,2,.22)');
+  ctx.fillStyle=gf;ctx.fillRect(0,H*.75,W,H*.28);
+  ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 5 — VILLAGE
+  // ════════════════════════════════════════════════════
+  ctx.save();
+  ctx.fillStyle='rgba(10,16,6,.50)';ctx.beginPath();ctx.ellipse(VX+26,VY+8,50,13,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#382610';ctx.fillRect(VX-4,VY-14,26,14);
+  ctx.fillStyle='#571808';
+  ctx.beginPath();ctx.moveTo(VX-8,VY-14);ctx.lineTo(VX+9,VY-27);ctx.lineTo(VX+24,VY-14);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#180A04';ctx.fillRect(VX+5,VY-8,5,8);
+  ctx.globalAlpha=.52+Math.sin(frame*.09)*.14;
+  ctx.fillStyle='#E8901A';ctx.fillRect(VX-1,VY-10,4,4);
+  ctx.globalAlpha=.11+Math.sin(frame*.09)*.06;
+  const vwg=ctx.createRadialGradient(VX+1,VY-8,0,VX+1,VY-8,11);
+  vwg.addColorStop(0,'rgba(215,135,26,.5)');vwg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=vwg;ctx.beginPath();ctx.arc(VX+1,VY-8,11,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#2A1C0A';ctx.fillRect(VX+24,VY-10,16,10);
+  ctx.fillStyle='#461408';
+  ctx.beginPath();ctx.moveTo(VX+22,VY-10);ctx.lineTo(VX+32,VY-20);ctx.lineTo(VX+42,VY-10);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#8B2200';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(VX+46,VY-20);ctx.lineTo(VX+62,VY-20);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(VX+44,VY-22);ctx.lineTo(VX+64,VY-22);ctx.stroke();
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(VX+48,VY-20);ctx.lineTo(VX+48,VY+2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(VX+60,VY-20);ctx.lineTo(VX+60,VY+2);ctx.stroke();
+  ctx.fillStyle='rgba(185,148,54,.58)';ctx.font='italic 8px Georgia';ctx.textAlign='center';
+  ctx.fillText('村  HOME',VX+28,VY+15);
+  ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 6 — DIRT PATH
+  // ════════════════════════════════════════════════════
+  // ── PATH: winding dirt trail connecting village → W1 → ... → W10 ──
+  // Control points offset perpendicular to each segment for natural winding
+  function windingPath(x1,y1,x2,y2,cleared){
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    const dx=x2-x1, dy=y2-y1;
+    const len=Math.hypot(dx,dy);
+    // Perpendicular offset — alternating left/right to wind naturally
+    const nx=-dy/len, ny=dx/len;
+    const warp=len*0.22;
+    const cx=mx+nx*warp, cy=my+ny*warp;
+    ctx.save();
+    if(cleared){
+      ctx.strokeStyle='rgba(42,28,8,.85)';ctx.lineWidth=7;ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+      ctx.strokeStyle='rgba(95,68,20,.60)';ctx.lineWidth=4.5;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+      ctx.strokeStyle='rgba(185,140,40,.20)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+    } else {
+      ctx.strokeStyle='rgba(55,65,40,.22)';ctx.lineWidth=3;ctx.setLineDash([5,12]);
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx,cy,x2,y2);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
+  const nd0=MAP_NODES[0];
+  windingPath(VX+64,VY-8,nd0.x,nd0.y,highestWorld>=1);
+  for(let i=0;i<9;i++){
+    const a=MAP_NODES[i],b=MAP_NODES[i+1];
+    // Alternate winding direction each segment using i
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=-dy/len, ny=dx/len;
+    const warp=len*0.20*(i%2===0?1:-1);
+    const cx=mx+nx*warp, cy=my+ny*warp;
+    const cleared=i+1<highestWorld;
+    ctx.save();
+    if(cleared){
+      ctx.strokeStyle='rgba(42,28,8,.85)';ctx.lineWidth=7;ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(cx,cy,b.x,b.y);ctx.stroke();
+      ctx.strokeStyle='rgba(95,68,20,.60)';ctx.lineWidth=4.5;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(cx,cy,b.x,b.y);ctx.stroke();
+      ctx.strokeStyle='rgba(185,140,40,.20)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(cx,cy,b.x,b.y);ctx.stroke();
+    } else {
+      ctx.strokeStyle='rgba(55,65,40,.22)';ctx.lineWidth=3;ctx.setLineDash([5,12]);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(cx,cy,b.x,b.y);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
+  // Village is always a clickable destination Sol can walk back to
+  lobbyBtns['map_village']={x:VX-10,y:VY-30,w:80,h:38};
+
+  // ════════════════════════════════════════════════════
+  // LAYER 7 — NODE MARKERS
+  // Just small glowing dots on the path. No boxes. No panels.
+  // The terrain IS the world. The dot marks where you enter.
+  // ════════════════════════════════════════════════════
+  for(let i=0;i<10;i++){
+    const nd=MAP_NODES[i];
+    const ww=i+1;
+    const unlocked=ww<=highestWorld;
+    const selected=ww===mapSelectedNode;
+    const X=nd.x,Y=nd.y;
+
+    // Node colors per world
+    const ncol=['#90D040','#A0D8F8','#44AA24','#FF6820','#9828E8','#4080C0','#C0A020','#00FFE0','#E8F4FF','#FF00FF'][i];
+
+    if(!unlocked){
+      lobbyBtns['map_node_'+i]={x:X-18,y:Y-18,w:36,h:36};
+    }
+
+    // Ambient glow — only for unlocked nodes
+    if(unlocked&&ww!==7){
+      ctx.save();
+      ctx.globalAlpha=selected?(.18+Math.sin(frame*.09)*.07):(.09+Math.sin(frame*.06+i)*.03);
+      const ng=ctx.createRadialGradient(X,Y,2,X,Y,selected?34:20);
+      ng.addColorStop(0,ncol.replace(/^#(..)(..)(..)$/,(_,r,g,b)=>`rgba(${parseInt(r,16)},${parseInt(g,16)},${parseInt(b,16)},.85)`));
+      ng.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=ng;ctx.beginPath();ctx.arc(X,Y,selected?34:20,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.restore();
+    }
+
+    // ── Per-world animated illustration ────────────────
+    ctx.save();
+    // Locked = very dim and desaturated, unlocked = full color
+    ctx.globalAlpha=unlocked?1:.20;
+    const pulse=Math.sin(frame*.10+i)*.5;
+
+    if(ww===1){
+      // W1 Forest — two small pines + ground dot
+      mPine(X-6,Y+3+pulse*.4,12,14,42,6,.90);
+      mPine(X+5,Y+4+pulse*.3,10,10,36,4,.80);
+      ctx.fillStyle='#4A8818';ctx.beginPath();ctx.ellipse(X,Y+5,8,2.5,0,0,Math.PI*2);ctx.fill();
+    } else if(ww===2){
+      // W2 Snow Peak — snow-capped mountain triangle + snowflakes
+      ctx.fillStyle='rgba(60,100,150,.70)';
+      ctx.beginPath();ctx.moveTo(X,Y-12+pulse*.3);ctx.lineTo(X-11,Y+6);ctx.lineTo(X+11,Y+6);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(220,235,255,.92)';
+      ctx.beginPath();ctx.moveTo(X,Y-12+pulse*.3);ctx.lineTo(X-5,Y-4);ctx.lineTo(X+5,Y-4);ctx.closePath();ctx.fill();
+      // Two tiny snowflakes drifting
+      for(let sf=0;sf<2;sf++){
+        const sfx=X+(sf===0?-8:7),sfy=Y-2+Math.sin(frame*.06+sf*2)*3;
+        ctx.fillStyle='rgba(200,225,255,.75)';ctx.font='7px sans-serif';ctx.textAlign='center';
+        ctx.fillText('❄',sfx,sfy);
+      }
+    } else if(ww===3){
+      // W3 Dark Forest — twisted bare tree
+      ctx.strokeStyle='rgba(40,60,20,.90)';ctx.lineWidth=2;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(X,Y+8);ctx.lineTo(X,Y-8+pulse*.4);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X,Y-2);ctx.lineTo(X-8,Y-9+pulse*.3);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X,Y-5);ctx.lineTo(X+7,Y-10+pulse*.2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X,-1+Y);ctx.lineTo(X-5,Y+3);ctx.stroke();
+      // Green eyes glow
+      ctx.fillStyle='#60FF40';ctx.globalAlpha=.55+Math.sin(frame*.12)*.25;
+      ctx.beginPath();ctx.arc(X-3,Y-1,1.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(X+3,Y-1,1.5,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    } else if(ww===4){
+      // W4 Volcanic Ridge — rock shape + lava glow
+      ctx.fillStyle='rgba(40,15,5,.85)';
+      ctx.beginPath();ctx.moveTo(X-9,Y+7);ctx.lineTo(X-5,Y-4);ctx.lineTo(X,Y-9+pulse*.5);ctx.lineTo(X+6,Y-3);ctx.lineTo(X+9,Y+7);ctx.closePath();ctx.fill();
+      ctx.globalAlpha=.45+Math.sin(frame*.14)*.2;
+      const lavag=ctx.createRadialGradient(X,Y+6,1,X,Y+6,9);
+      lavag.addColorStop(0,'rgba(255,80,0,.8)');lavag.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=lavag;ctx.beginPath();ctx.arc(X,Y+7,9,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    } else if(ww===5){
+      // W5 Hokuzan Abyss — crumbling pillar + purple crack
+      ctx.fillStyle='rgba(18,8,28,.85)';
+      ctx.fillRect(X-5,Y-10+pulse*.3,10,18);
+      ctx.fillStyle='rgba(14,6,22,.70)';
+      ctx.fillRect(X-7,Y+6,14,4);
+      ctx.fillRect(X-4,Y-13+pulse*.3,8,4);
+      // Purple crack
+      ctx.strokeStyle='rgba(140,40,240,.65)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(X-1,Y-8+pulse*.3);ctx.lineTo(X+2,Y+6);ctx.stroke();
+      ctx.globalAlpha=.28+Math.sin(frame*.08)*.12;
+      ctx.fillStyle='#8020E0';ctx.beginPath();ctx.arc(X,Y,8,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    } else if(ww===6){
+      // W6 Storm Cliffs — rain streaks + rocky cliff
+      ctx.fillStyle='rgba(22,35,55,.78)';
+      ctx.beginPath();ctx.moveTo(X-8,Y+8);ctx.lineTo(X-6,Y-6);ctx.lineTo(X+2,Y-10+pulse*.4);ctx.lineTo(X+8,Y-2);ctx.lineTo(X+8,Y+8);ctx.closePath();ctx.fill();
+      // Rain streaks
+      ctx.strokeStyle='rgba(100,160,220,.55)';ctx.lineWidth=1;
+      for(let r=0;r<4;r++){
+        const rx=X-7+r*4,ry=Y-12+((frame*3+r*15)%20);
+        ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx+2,ry+7);ctx.stroke();
+      }
+    } else if(ww===7){
+      // W7 Haunted Ruins — torii gate silhouette + amber glow
+      ctx.strokeStyle='rgba(80,38,8,.82)';ctx.lineWidth=2;ctx.lineCap='round';
+      // Torii
+      ctx.beginPath();ctx.moveTo(X-10,Y-2+pulse*.3);ctx.lineTo(X+10,Y-2+pulse*.3);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X-9,Y-5+pulse*.3);ctx.lineTo(X+9,Y-5+pulse*.3);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X-7,Y-5+pulse*.3);ctx.lineTo(X-7,Y+9);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(X+7,Y-5+pulse*.3);ctx.lineTo(X+7,Y+9);ctx.stroke();
+      // Small amber lantern dot — no large pulsing circle
+      ctx.globalAlpha=(unlocked?.55:1)*(.70+Math.sin(frame*.11)*.20);
+      ctx.fillStyle='#C07810';
+      ctx.beginPath();ctx.arc(X,Y+1,3,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=unlocked?1:.20;
+    } else if(ww===8){
+      // W8 Crystal Caverns — three crystal spires
+      const cols=['#00CCBB','#00EEDD','#00FFEE','#22FFCC'];
+      [[-7,8,14],[-2,5,18],[4,7,16]].forEach(([ox,base,ht],ci)=>{
+        ctx.fillStyle=cols[ci];ctx.globalAlpha=.72+Math.sin(frame*.09+ci)*.15;
+        ctx.beginPath();ctx.moveTo(X+ox-3,Y+base);ctx.lineTo(X+ox+3,Y+base);ctx.lineTo(X+ox,Y+base-ht+pulse*.5);ctx.closePath();ctx.fill();
+      });
+      ctx.globalAlpha=1;
+    } else if(ww===9){
+      // W9 Sky Peaks — light blue open sky peak + tiny cloud
+      ctx.fillStyle='rgba(100,155,210,.55)';
+      ctx.beginPath();ctx.moveTo(X,Y-12+pulse*.6);ctx.lineTo(X-10,Y+6);ctx.lineTo(X+10,Y+6);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(220,235,255,.88)';
+      ctx.beginPath();ctx.moveTo(X,Y-12+pulse*.6);ctx.lineTo(X-4,Y-5);ctx.lineTo(X+4,Y-5);ctx.closePath();ctx.fill();
+      // Tiny cloud
+      ctx.fillStyle='rgba(210,228,250,.65)';
+      ctx.beginPath();ctx.arc(X+9,Y-4+pulse*.3,4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(X+13,Y-3+pulse*.3,3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(X+6,Y-3+pulse*.3,3,0,Math.PI*2);ctx.fill();
+    } else if(ww===10){
+      // W10 Summit — void spike crown + magenta energy
+      for(let sp=0;sp<5;sp++){
+        const ang=-Math.PI/2+(sp-2)*0.32;
+        const spLen=8+Math.sin(frame*.08+sp)*.3*(sp===2?2:1);
+        ctx.strokeStyle=sp===2?'#FF00FF':'rgba(200,0,200,.65)';
+        ctx.lineWidth=sp===2?2:1;
+        ctx.beginPath();ctx.moveTo(X,Y+3);
+        ctx.lineTo(X+Math.cos(ang)*spLen*1.4,Y+Math.sin(ang)*spLen+pulse*.4);
+        ctx.stroke();
+      }
+      ctx.globalAlpha=.35+Math.sin(frame*.10)*.15;
+      ctx.fillStyle='#FF00FF';ctx.beginPath();ctx.arc(X,Y,6,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    ctx.shadowBlur=0;
+
+    // World number label below
+    ctx.fillStyle=selected?'rgba(230,175,48,.92)':'rgba(155,125,48,.50)';
+    ctx.font=selected?'bold 8px Georgia':'7px Georgia';ctx.textAlign='center';
+    ctx.shadowColor='rgba(0,0,0,.9)';ctx.shadowBlur=4;
+    ctx.fillText('W'+ww,X,Y+20);
+    ctx.shadowBlur=0;
+    ctx.restore();
+
+    lobbyBtns['map_node_'+i]={x:X-20,y:Y-20,w:40,h:40};
+  }
+
+  // ════════════════════════════════════════════════════
+  // LAYER 8 — SOL
+  // ════════════════════════════════════════════════════
+  const sb=Math.sin(frame*.14)*1.4;
+  const rp=mapSolWalking?Math.sin(mapSolStep*.28)*3:0;
+  const sx=Math.round(mapSolX),sy=Math.round(mapSolY+sb);
+  ctx.save();
+  ctx.globalAlpha=.20;ctx.fillStyle='#000';
+  ctx.beginPath();ctx.ellipse(sx+11,sy+30,9,3,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  if(mapSolFacing<0){ctx.translate(sx+22,0);ctx.scale(-1,1);}
+  const bx=mapSolFacing<0?0:sx;
+  ctx.fillStyle='#CBC3B3';ctx.beginPath();ctx.roundRect(bx+1,sy+9,18,12,2);ctx.fill();
+  ctx.fillStyle='#9F9787';ctx.beginPath();ctx.roundRect(bx+1,sy+9,18,5,2);ctx.fill();
+  ctx.fillStyle='#DBD3C3';ctx.beginPath();ctx.roundRect(bx+4,sy+13,10,6,2);ctx.fill();
+  ctx.fillStyle='#CBC3B3';ctx.beginPath();ctx.roundRect(bx+10,sy+1,12,10,2);ctx.fill();
+  ctx.fillStyle='#9F9787';ctx.beginPath();ctx.roundRect(bx+10,sy+1,12,4,2);ctx.fill();
+  ctx.fillStyle='#D3CBC1';ctx.beginPath();ctx.roundRect(bx+18,sy+4,5,5,2);ctx.fill();
+  ctx.fillStyle='#CBC3B3';ctx.beginPath();ctx.roundRect(bx+11,sy-3,3,5,1);ctx.fill();
+  ctx.fillStyle='#170B05';ctx.beginPath();ctx.arc(bx+21,sy+5,1.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#190D05';ctx.beginPath();ctx.ellipse(bx+22,sy+7,2,1.5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#B7AF9F';
+  ctx.fillRect(bx+2,sy+19+rp,4,7);ctx.fillRect(bx+7,sy+19-rp,4,7);
+  ctx.fillRect(bx+11,sy+19+rp*.7,4,7);ctx.fillRect(bx+15,sy+19-rp*.5,4,7);
+  ctx.strokeStyle='#B7AF9F';ctx.lineWidth=2.5;ctx.lineCap='round';
+  if(mapSolFacing<0){ctx.beginPath();ctx.moveTo(19,sy+10);ctx.quadraticCurveTo(28,sy+2,21,sy-2);ctx.stroke();}
+  else{ctx.beginPath();ctx.moveTo(sx+1,sy+10);ctx.quadraticCurveTo(sx-8,sy+2,sx+3,sy-2);ctx.stroke();}
+  ctx.restore();
+
+  // ════════════════════════════════════════════════════
+  // LAYER 9 — INFO PANEL (bottom-right only)
+  // ════════════════════════════════════════════════════
+  const selTh=THEMES[mapSelectedNode-1];
+  const pW=152,pH=60,pX=W-pW-8,pY=H-pH-8;
+  ctx.save();
+  ctx.fillStyle='rgba(2,3,10,.92)';ctx.beginPath();ctx.roundRect(pX,pY,pW,pH,5);ctx.fill();
+  ctx.strokeStyle='rgba(188,132,26,.62)';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(pX,pY,pW,pH,5);ctx.stroke();
+  ctx.textAlign='center';
+  ctx.fillStyle='#E8B030';ctx.font='bold 10px Georgia';
+  ctx.fillText('W'+mapSelectedNode+' — '+selTh.name,pX+pW/2,pY+14);
+  ctx.fillStyle='rgba(152,122,62,.62)';ctx.font='9px serif';
+  ctx.fillText(selTh.kanji,pX+pW/2,pY+25);
+  const st=mapSelectedNode<highestWorld?'CLEARED ✓':mapSelectedNode===highestWorld?'CURRENT':'LOCKED';
+  ctx.fillStyle=mapSelectedNode<highestWorld?'#A8C850':mapSelectedNode===highestWorld?'#E8B030':'#484848';
+  ctx.font='bold 8px monospace';ctx.fillText(st,pX+pW/2,pY+36);
+  if(mapSelectedNode<=highestWorld){
+    ctx.shadowColor='rgba(188,132,26,.42)';ctx.shadowBlur=5;
+    uiBtn('map_enter_btn',pX+8,pY+41,pW-16,16,'▶  ENTER WORLD',{col:'rgba(6,10,3,.90)',textCol:'#E8B030',font:'bold 9px Georgia',sel:true,accent:'#C08820'});
+    ctx.shadowBlur=0;
+  }
+  ctx.restore();
+
+  // ── SHOP / MENU ──────────────────────────────────────
+  uiBtn('map_shop_btn',8,H-30,68,22,'🛒 SHOP',{col:'rgba(8,13,4,.88)',textCol:'rgba(192,155,48,.90)',font:'bold 9px Georgia',sel:false,accent:'rgba(148,112,24,.54)'});
+  uiBtn('map_menu_btn',82,H-30,68,22,'☰ MENU',{col:'rgba(5,6,14,.88)',textCol:'rgba(158,150,192,.80)',font:'bold 9px Georgia',sel:false,accent:'rgba(92,84,132,.38)'});
+
+  // ── HEADER ───────────────────────────────────────────
+  ctx.save();ctx.textAlign='center';
+  ctx.fillStyle='rgba(0,0,0,.54)';ctx.beginPath();ctx.roundRect(W/2-80,4,160,19,3);ctx.fill();
+  ctx.fillStyle='#DCBA42';ctx.font='bold 11px Georgia';ctx.shadowColor='rgba(145,92,0,.28)';ctx.shadowBlur=5;
+  ctx.fillText('HOKUZAN  ·  SOL FANG',W/2,18);ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(0,0,0,.48)';ctx.beginPath();ctx.roundRect(W-60,4,54,16,3);ctx.fill();
+  ctx.fillStyle='#E8B030';ctx.font='bold 8px monospace';ctx.textAlign='right';
+  ctx.fillText('🪙 '+coinBank,W-8,16);
+  ctx.fillStyle='rgba(90,78,38,.36)';ctx.font='7px monospace';ctx.textAlign='center';
+  ctx.fillText('↑↓ navigate  ·  ENTER = start  ·  M = menu',W/2,H-8);
+  ctx.restore();
+
+  // ── MENU OVERLAY ─────────────────────────────────────
+  if(mapMenuOpen){
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,.82)';ctx.fillRect(0,0,W,H);
+    const mw=186,mh=186,mox=W/2-mw/2,moy=H/2-mh/2;
+    ctx.fillStyle='#030508';ctx.beginPath();ctx.roundRect(mox,moy,mw,mh,8);ctx.fill();
+    ctx.strokeStyle='rgba(170,124,28,.62)';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(mox,moy,mw,mh,8);ctx.stroke();
+    ctx.textAlign='center';ctx.fillStyle='#DCBA42';ctx.font='bold 13px Georgia';
+    ctx.fillText('MENU',mox+mw/2,moy+22);
+    ctx.strokeStyle='rgba(148,108,24,.26)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(mox+16,moy+30);ctx.lineTo(mox+mw-16,moy+30);ctx.stroke();
+    const mbx=mox+14,mbw=mw-28,mby=moy+38,mbg=34;
+    uiBtn('map_enter',mbx,mby,mbw,26,'▶  ENTER WORLD '+mapSelectedNode,{col:'#090F03',textCol:'#A8C850',font:'bold 10px Georgia',sel:true,accent:'#527522'});
+    uiBtn('map_shop',mbx,mby+mbg,mbw,26,'🛒  SHOP & UPGRADES',{col:'#070E02',textCol:'#929832',font:'bold 10px Georgia',sel:false,accent:'#404F14'});
+    uiBtn('map_mute',mbx,mby+mbg*2,mbw,26,AU.muted?'🔊  UNMUTE':'🔇  MUTE',{col:'#04060C',textCol:'#72729C',font:'bold 10px Georgia',sel:false,accent:'#2E3258'});
+    uiBtn('map_title',mbx,mby+mbg*3,mbw,26,'↩  EXIT TO TITLE',{col:'#0C0502',textCol:'#985242',font:'bold 10px Georgia',sel:false,accent:'#4C1C14'});
+    uiBtn('map_close',mox+mw-26,moy+6,18,16,'✕',{col:'#0C0502',textCol:'#943434',font:'bold 9px Georgia',sel:false,accent:'#4C1C14'});
+    ctx.restore();
+  }
+}
 function drawLobby(){
   lobbyBtns={};
   const fromTitle=!bossActive&&world===1&&score===0&&coins===0;
@@ -3905,14 +4737,6 @@ function drawLobby(){
   ctx.fillText(inGame?'Score: '+score.toLocaleString():'Ready!',dogPanX+dogPanW/2,dogPanY+dogPanH-56);
   ctx.fillStyle='#908060';ctx.font='10px Georgia';
   ctx.fillText('Lives: '+lives,dogPanX+dogPanW/2,dogPanY+dogPanH-40);
-
-  // PLAY button
-  const _nextW=Math.min(world+1,10);
-  const playLabel=inGame?('▶  PLAY  W'+_nextW):'▶  PLAY';
-  const playBtnY=dogPanY+dogPanH-22;
-  ctx.shadowColor='rgba(0,200,80,.6)';ctx.shadowBlur=10;
-  uiBtn('play',dogPanX+6,playBtnY-14,dogPanW-12,28,playLabel,{col:'#40C860',textCol:'#C0FFD0',font:'bold 13px Georgia',sel:true,accent:'#40C860'});
-  ctx.shadowBlur=0;
 
   // ── RIGHT PANEL: tabs + content ──
   const rpX=dogPanX+dogPanW+8,rpW=W-rpX-26,rpY=28;
@@ -4064,8 +4888,8 @@ function drawLobby(){
   }
 
   // Footer hint + particles
-  // Footer: PLAY/CONTINUE button — clearly separated from content
-  uiBtn('cont',rpX+rpW/2-70,H-48,140,24,bossActive?'CONTINUE ▶':'▶ PLAY',{col:'#40C860',textCol:'#C0FFD0',font:'bold 12px Georgia',sel:true,accent:'#40C860'});
+  // Footer: BACK TO MAP button
+  uiBtn('back_to_map',rpX+rpW/2-70,H-48,140,24,'◀ BACK TO MAP',{col:'#2080A0',textCol:'#A0E8FF',font:'bold 12px Georgia',sel:true,accent:'#2080A0'});
 
   for(const p of particles){ctx.globalAlpha=p.life/p.max;ctx.fillStyle=p.col;ctx.fillRect(p.x-p.sz/2,p.y-p.sz/2,p.sz,p.sz);}
   ctx.globalAlpha=1;ctx.restore();ctx.textAlign='left';
@@ -4277,9 +5101,6 @@ function drawTitle(){
   // Subtitle line
   ctx.fillStyle='rgba(200,170,80,.7)';ctx.font='14px Georgia';
   ctx.fillText('〜  Sol Fang  〜',W/2,H*.5+22);
-  // English subtitle
-  ctx.fillStyle='rgba(160,130,60,.6)';ctx.font='12px monospace';
-  ctx.fillText('HOKKYOKU: SOL FANG',W/2,H*.5+42);
 
   // Easter egg ? button — subtle, bottom-left corner
   const eggAlpha=0.18+Math.sin(frame*.04)*.06;
@@ -4398,12 +5219,13 @@ function drawEasterEgg(){
 function render(){
   // I153: hide touch controls during menus
   const _tui=document.getElementById('touch-ui');
-  if(_tui){const _menuState=['title','howtoplay','nameentry','lobby','leaderboard','dead','timeover','gameover'].includes(state);_tui.style.visibility=_menuState?'hidden':'visible';}
+  if(_tui){const _menuState=['title','howtoplay','nameentry','lobby','map','leaderboard','dead','timeover','gameover'].includes(state);_tui.style.visibility=_menuState?'hidden':'visible';}
   if(state==='nameentry'){drawNameEntry();return;}
   if(state==='howtoplay'){drawHowToPlay();return;}
   if(state==='title'){drawTitle();drawEasterEgg();return;}
   if(state==='intro'){drawIntro();return;}
   if(state==='lobby'){drawLobby();return;}
+  if(state==='map'){drawWorldMap();return;}
   if(state==='leaderboard'){drawLeaderboard();return;}
   const sx=screenShake>0?Math.sin(frame*1.8)*(screenShake*.5):0,sy=screenShake>0?Math.cos(frame*2.1)*(screenShake*.3):0;
   ctx.save();ctx.translate(sx,sy);
@@ -4493,19 +5315,20 @@ function render(){
     uiBtn('pause_lobby', bx,b3y,bw,bh,'\ud83c\udf92  EXIT TO LOBBY',{col:'#C84040',textCol:'#FFD0D0',font:'bold 14px Georgia'});
     // Hint
     ctx.fillStyle='rgba(160,140,80,.45)';ctx.font='10px monospace';
-    ctx.fillText('[P/ESC] resume  [M] mute  [L] lobby',W/2,b3y+bh+12);
+    ctx.fillText('[P/ESC] resume  [L] exit to map',W/2,b3y+bh+12);
     ctx.restore();
   }
 }
 
 // ── BOOT ─────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  if(state==='howtoplay'){state='title';return;}
+  if(state==='howtoplay'){goMap();return;}
   if(e.code==='Space'&&state==='timeover')return;
   if(e.code==='Space'&&state==='dead'){respawnInWorld();return;}
   if(e.code==='Space'&&(state==='title'||state==='gameover'))startGame();
   if(e.code==='KeyL'&&state==='title'){openLobbyFromTitle();return;}
-  if(e.code==='Escape'&&state==='lobby')continueFromShop();
+  if(e.code==='Escape'&&state==='lobby'){backToMap();return;}
+  if(e.code==='Escape'&&state==='map'){mapMenuOpen=false;return;}
   if(e.code==='Escape'&&state==='leaderboard'&&!lbEntering){state='title';}
   if(e.code==='Escape'&&vendActive){vendActive=false;}
 });
@@ -4640,6 +5463,8 @@ document.addEventListener('keydown',e=>{
 try{timeLeft=500;buildMap(1);buildEnemies(1);resetP();}catch(e){console.error('Boot error',e);}
 loadLB().catch(()=>{lbEntries=[];});
 function loop(){try{update();}catch(e){console.error(e);}try{render();}catch(e){console.error(e);}requestAnimationFrame(loop);}
+// Initialize Sol at village — he walks to a node when player clicks one
+(function(){mapSolX=MAP_VILLAGE_X()-10;mapSolY=MAP_VILLAGE_Y()-20;mapSolTargetX=mapSolX;mapSolTargetY=mapSolY;mapSelectedNode=highestWorld;})();
 // B281/I119: auto-pause when tab hidden (prevents timer deaths + battery drain)
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&state==='playing'&&!paused)togglePause();
