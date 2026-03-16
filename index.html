@@ -457,7 +457,7 @@ function handleUIClick(gx,gy){
   if(state==='nameentry'){
     if(lbNameInput.trim().length>0){
       playerName=lbNameInput.trim().slice(0,12);
-      try{localStorage.setItem('ginga_name',playerName);}catch(e){}
+      try{localStorage.setItem('ginga2_name',playerName);}catch(e){}
       state=firstLaunch?'howtoplay':'map';
     }
     return;
@@ -578,7 +578,7 @@ function handleUIClick(gx,gy){
     // Score skins tab
     if(shopTab===2){
       for(let i=0;i<SKINS.length;i++){if(hitBtn('sk'+i,gx,gy)){
-        skinShopCursor=i;if(unlockedSkins.includes(i)){currentSkin=i;AU.play('vend');try{localStorage.setItem('ginga_skin_sel',currentSkin);}catch(e){}}
+        skinShopCursor=i;if(unlockedSkins.includes(i)){currentSkin=i;AU.play('vend');try{localStorage.setItem('ginga2_skin_sel',currentSkin);}catch(e){}}
         return;
       }}
     }
@@ -603,7 +603,7 @@ function handleUIClick(gx,gy){
     if(hitBtn('pause_lobby', gx,gy)){
       paused=false;clearInterval(timerID);AU.bgmStop();
       coinBank+=coins;coins=0;
-      try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+      try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
       state='lobby';shopTab=0;shopCursor=0;skinShopCursor=0;return;
     }
     return; // don't fall through to jump while paused
@@ -676,7 +676,7 @@ function checkSkinUnlocks(){
       addMsg('🎨 SKIN UNLOCKED: '+SKINS[i].name+'!','#FFD700');
     }
   }
-  if(gained)try{localStorage.setItem('ginga_skins',JSON.stringify(unlockedSkins));localStorage.setItem('ginga_skin_sel',currentSkin);}catch(e){}
+  if(gained)try{localStorage.setItem('ginga2_skins',JSON.stringify(unlockedSkins));localStorage.setItem('ginga2_skin_sel',currentSkin);}catch(e){}
 }
 
 // ── COIN SKINS (100 purchasable) ──────────────────────
@@ -926,42 +926,42 @@ function buyCoinSkin(idx){
   coinSkinSelected=idx;
   addMsg('🎨 '+COIN_SKINS[idx].name+' equipped!','#FFD700');
   // Save to localStorage
-  try{localStorage.setItem('ginga_coin_skins',JSON.stringify([...coinSkinOwned]));
-      localStorage.setItem('ginga_coin_sel',coinSkinSelected);
-      localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+  try{localStorage.setItem('ginga2_coin_skins',JSON.stringify([...coinSkinOwned]));
+      localStorage.setItem('ginga2_coin_sel',coinSkinSelected);
+      localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
   return true;
 }
 // Load saved coin skins
 try{
-  const saved=JSON.parse(localStorage.getItem('ginga_coin_skins')||'[]');
+  const saved=JSON.parse(localStorage.getItem('ginga2_coin_skins')||'[]');
   coinSkinOwned=new Set(saved);
-  const _cs=parseInt(localStorage.getItem('ginga_coin_sel')??'-1');
+  const _cs=parseInt(localStorage.getItem('ginga2_coin_sel')??'-1');
   coinSkinSelected=isNaN(_cs)?-1:_cs; // B322: guard against corrupted 'NaN' string
-  const savedBank=parseInt(localStorage.getItem('ginga_coin_bank')||'0');
+  const savedBank=parseInt(localStorage.getItem('ginga2_coin_bank')||'0');
   if(savedBank>0)coinBank=savedBank;
 }catch(e){}
 // Daily login bonus
 try{
   const today=new Date().toDateString();
-  const lastLogin=localStorage.getItem('ginga_last_login')||'';
-  const streak=parseInt(localStorage.getItem('ginga_streak')||'0');
+  const lastLogin=localStorage.getItem('ginga2_last_login')||'';
+  const streak=parseInt(localStorage.getItem('ginga2_streak')||'0');
   if(lastLogin!==today){
     const newStreak=lastLogin&&(new Date()-new Date(lastLogin))<172800000?streak+1:1;
     const bonus=10+Math.min(newStreak*2,20);
     coinBank+=bonus;
-    localStorage.setItem('ginga_last_login',today);
-    localStorage.setItem('ginga_streak',newStreak);
-    localStorage.setItem('ginga_coin_bank',coinBank);
+    localStorage.setItem('ginga2_last_login',today);
+    localStorage.setItem('ginga2_streak',newStreak);
+    localStorage.setItem('ginga2_coin_bank',coinBank);
     // Store bonus message to display on title
     window._dailyBonus={coins:bonus,streak:newStreak};
   }
 }catch(e){}
 // Load saved score skins
 try{
-  const ss=JSON.parse(localStorage.getItem('ginga_skins')||'[0]');
+  const ss=JSON.parse(localStorage.getItem('ginga2_skins')||'[0]');
   unlockedSkins=ss.filter(i=>Number.isInteger(i)&&i>=0&&i<SKINS.length);
   if(!unlockedSkins.includes(0))unlockedSkins.unshift(0);
-  const ssel=parseInt(localStorage.getItem('ginga_skin_sel')||'0');
+  const ssel=parseInt(localStorage.getItem('ginga2_skin_sel')||'0');
   if(unlockedSkins.includes(ssel))currentSkin=ssel;
 }catch(e){}
 
@@ -1003,10 +1003,10 @@ const UKEYS=Object.keys(UPG);
 let shopTab=0,shopCursor=0,skinShopCursor=0;
 
 // ── STATE ─────────────────────────────────────────────
-let playerName=localStorage.getItem('ginga_name')||'';
+let playerName=localStorage.getItem('ginga2_name')||'';
 let lbNameInput='';
-const firstLaunch=!localStorage.getItem('ginga_played');
-if(firstLaunch)try{localStorage.setItem('ginga_played','1');}catch(e){}
+const firstLaunch=!localStorage.getItem('ginga2_played');
+if(firstLaunch)try{localStorage.setItem('ginga2_played','1');}catch(e){}
 let state='nameentry',score=0,lives=3,coins=0,timeLeft=500,world=1;
 let transitionAlpha=0,transitionDir=0,transitionCb=null; // fade transition system
 // ── WORLD MAP STATE ───────────────────────────────────
@@ -1248,7 +1248,7 @@ function trySpin(){
   if(P.dead||P.spinActive)return;
   if(P.spinStored<=0){floatUp('No Battouga!',P.x,P.y-20,'#888');return;}
   AU.play('spin');
-  P.spinStored--;P.spinActive=true;P.spinTimer=540+dur();P.spinAngle=0;
+  P.spinStored--;P.spinActive=true;P.spinTimer=180+dur();P.spinAngle=0;
   burst(P.x+gW()/2,P.y+gH()/2,28,'#80B8FF',9);floatUp('絶天狼抜刀牙！',P.x,P.y-24,'#A0D0FF');
   addMsg('BATTOUGA SPIN!','#60A8FF');screenShake=14;
 }
@@ -1279,7 +1279,8 @@ function callArmy(){
   const ep=ALLY_ROSTER.filter(a=>a.elite||a.boss);
   const ce=ep[Math.floor(Math.random()*ep.length)];
   const picks=[ce,...shuffled.filter(a=>a.name!==ce.name)].slice(0,count);
-  picks.forEach((a,i)=>{const ax=inArena?3*TILE:(-a.sz-i*80);allies.push({name:a.name,col:a.col,sz:a.sz,spd:a.spd,dmg:a.dmg,x:ax,y:13*TILE-a.sz,delay:i*18,active:false,elite:a.elite||false,boss:a.boss||false,nameTimer:120});});
+  const bossPool={hits:3+Math.floor(Math.random()*3)};  // 3-5 total boss hits shared
+  picks.forEach((a,i)=>{const ax=inArena?3*TILE:(-a.sz-i*80);allies.push({name:a.name,col:a.col,sz:a.sz,spd:a.spd,dmg:a.dmg,x:ax,y:13*TILE-a.sz,delay:i*18,active:false,elite:a.elite||false,boss:a.boss||false,nameTimer:120,bossDmgCd:0,bossPool});});
   addMsg('OHU ARMY ASSEMBLES!','#FFE840');screenShake=25;burst(P.x+gW()/2,P.y+gH()/2,35,'#FFE840',12);AU.play('army');
 }
 function updAllies(){
@@ -1294,7 +1295,8 @@ function updAllies(){
       }
     }
     if(bossActive&&boss.alive&&a.boss){
-      if(a.x<boss.x+boss.w&&a.x+a.sz>boss.x&&a.y<boss.y+boss.h&&a.y+a.sz>boss.y){boss.hp-=a.dmg;bossHurt();if(boss.hp<=0)bossDie();}
+      if(a.bossDmgCd>0)a.bossDmgCd--;
+      if(a.x<boss.x+boss.w&&a.x+a.sz>boss.x&&a.y<boss.y+boss.h&&a.y+a.sz>boss.y&&!a.bossDmgCd&&a.bossPool&&a.bossPool.hits>0){boss.hp-=a.dmg;a.bossPool.hits--;bossHurt();a.bossDmgCd=30;if(boss.hp<=0)bossDie();}
     }
     const allyMaxX=inArena?ARENA_COLS*TILE+20:LCOLS*TILE+100;
     if(a.x>allyMaxX)allies.splice(i,1);
@@ -1983,7 +1985,7 @@ async function loadLB(){
 async function submitScore(name){
   const n=(name||playerName||'Unknown').trim().slice(0,12)||'Unknown';
   playerName=n;
-  try{localStorage.setItem('ginga_name',n);}catch(e){}
+  try{localStorage.setItem('ginga2_name',n);}catch(e){}
   const sig=makeSig(pendingLbScore,world);
   try{
     await fetch(`${SB_URL}/rest/v1/leaderboard`,{
@@ -2082,7 +2084,7 @@ function onTimeOver(){
   state='timeover';
   setTimeout(()=>{
     coinBank+=Math.floor(coins*.5);coins=0;
-    try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+    try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
     lives--;
     if(lives<=0){
       lives=3+UPG.extraLife.owned;
@@ -2111,7 +2113,7 @@ function killP(){
 function onDead(){
   comboCount=0;comboTimer=0;
   coinBank+=Math.floor(coins*.5);coins=0;
-  try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+  try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
   lives--;
   if(lives<=0){
     lives=3+UPG.extraLife.owned;
@@ -2123,7 +2125,7 @@ function onDead(){
   }
 }
 function goLobby(tab=1){coinBank+=coins;coins=0;state='lobby';shopCursor=0;shopTab=tab;skinShopCursor=0;clearInterval(timerID);AU.bgmStop();inArena=false;arenaExitOpen=false;
-  try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+  try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
 }
 // Keep goShop as alias for compatibility
 function goShop(){goLobby(1);}
@@ -2137,7 +2139,7 @@ function goMap(){
   mapSolX=spawnNode.x-11;mapSolY=spawnNode.y-20;
   mapSolTargetX=mapSolX;mapSolTargetY=mapSolY;mapSolWalking=false;mapSolFacing=1;
   state='map';
-  try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+  try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
 }
 function openLobbyFromTitle(){goMap();}
 function continueFromShop(){
@@ -2202,7 +2204,7 @@ function update(){
   if(paused&&just['KeyL']){
     paused=false;clearInterval(timerID);AU.bgmStop();
     coinBank+=coins;coins=0;
-    try{localStorage.setItem('ginga_coin_bank',coinBank);}catch(e){}
+    try{localStorage.setItem('ginga2_coin_bank',coinBank);}catch(e){}
     goMap();clrJ();return;
   }
   if(paused){clrJ();return;}
@@ -2212,7 +2214,7 @@ function update(){
     if(just['Enter']){
       if(lbNameInput.trim().length>0){
         playerName=lbNameInput.trim().slice(0,12);
-        try{localStorage.setItem('ginga_name',playerName);}catch(e){}
+        try{localStorage.setItem('ginga2_name',playerName);}catch(e){}
         state=firstLaunch?'howtoplay':'map';
       }
     }
@@ -2351,7 +2353,7 @@ function update(){
   }else{P.ducking=false;P.groundPound=false;P.wasAirborne=false;}
 
   if(P.gigaTimer>0){P.gigaTimer--;if(P.gigaTimer<=0){P.giga=false;addMsg('Giga Kiba wore off — still Big!','#C08030');burst(P.x+gW()/2,P.y+gH()/2,18,'#FF8800',5);}}
-  if(P.spinTimer>0){P.spinTimer--;P.spinAngle+=.22;if(!P.spinTimer){P.spinActive=false;addMsg('Battouga ended'+(P.spinStored>0?' ×'+P.spinStored+' ready':''),'#4488BB');}}
+  if(P.spinTimer>0){P.spinTimer--;P.spinAngle+=.22;if(!P.spinTimer){P.spinActive=false;enemies.forEach(e=>e.spinHitCd=0);wolfPack.forEach(w=>w.spinHitCd=0);addMsg('Battouga ended'+(P.spinStored>0?' ×'+P.spinStored+' ready':''),'#4488BB');}}
   if(P.howlTimer>0){P.howlTimer--;if(!P.howlTimer)P.howlActive=false;}
   if(P.rallyTimer>0){P.rallyTimer--;if(!P.rallyTimer)P.rallyActive=false;}
   if(P.speedTimer>0){P.speedTimer--;
@@ -2362,7 +2364,7 @@ function update(){
   }
   if(P.biteTimer>0){P.biteTimer--;if(!P.biteTimer)P.biteActive=false;}
   if(P.inv>0)P.inv--;
-  if(P.spinActive){const sx=P.x+gW()/2;for(const e of enemies)if(e.alive&&!e.squished&&Math.hypot(e.x+e.w/2-sx,e.y+e.h/2-(P.y+gH()/2))<(P.big?85:65))defeat(e,'SPIN');for(const w of wolfPack)if(w.alive&&!w.squished&&Math.hypot(w.x+w.w/2-sx,w.y+w.h/2-(P.y+gH()/2))<(P.big?85:65))defeatWolf(w,'spin');}
+  if(P.spinActive){const sx=P.x+gW()/2;for(const e of enemies){if(e.spinHitCd>0)e.spinHitCd--;if(e.alive&&!e.squished&&!e.spinHitCd&&Math.hypot(e.x+e.w/2-sx,e.y+e.h/2-(P.y+gH()/2))<(P.big?85:65)){defeat(e,'SPIN');e.spinHitCd=6;}}for(const w of wolfPack){if(w.spinHitCd>0)w.spinHitCd--;if(w.alive&&!w.squished&&!w.spinHitCd&&Math.hypot(w.x+w.w/2-sx,w.y+w.h/2-(P.y+gH()/2))<(P.big?85:65)){defeatWolf(w,'spin');w.spinHitCd=6;}}}
   if(skinNotif){skinNotif.timer--;if(skinNotif.timer<=0)skinNotif=null;}
   if(comboTimer>0){comboTimer--;if(comboTimer<=0)comboCount=0;}
 
@@ -3776,7 +3778,7 @@ function drawHUD(){
     const permSpeed=P.speedActive&&P.speedTimer>9990;
     const nm=P.rallyActive?'🏅 OHU RALLY':P.spinActive?'🌀 BATTOUGA SPIN':P.howlActive?'🐺 WAR HOWL':P.speedActive?(permSpeed?'⚡ ADRENALINE ∞':'⚡ ADRENALINE'):P.big?'🐕 BIG SOL':'';
     const pt=P.rallyTimer||P.spinTimer||P.howlTimer||(permSpeed?0:P.speedTimer)||(P.big?999:0);
-    const ptMax=P.rallyActive?420:P.spinActive?600:P.howlActive?360:P.speedActive?480:999;
+    const ptMax=P.rallyActive?420:P.spinActive?180:P.howlActive?360:P.speedActive?480:999;
     const pc2=P.rallyActive?'#F0C840':P.spinActive?'#60A8FF':P.howlActive?'#FF9020':P.speedActive?'#FF60A0':'#90C860';
     ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W/2-120,H-30,240,22);
     if(permSpeed){
